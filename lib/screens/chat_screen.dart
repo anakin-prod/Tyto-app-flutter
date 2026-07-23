@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
+import '../widgets/tyto_drawer.dart';
+import 'placeholder_screen.dart';
 
 /// Première fondation de l'écran de chat : juste la coquille visuelle
 /// (en-tête, zone de conversation, champ de saisie), sans encore l'appel
@@ -31,10 +33,26 @@ class _ChatScreenState extends State<ChatScreen> {
     _controller.clear();
   }
 
+  void _onDrawerSelect(String id) {
+    Navigator.pop(context); // referme le tiroir
+    if (id == 'chat') return; // déjà sur cet écran
+    final labels = {
+      'pets': 'Mes animaux',
+      'carnet': 'Carnet de santé',
+      'tableau': 'Tableau des rappels',
+      'veille': 'Veille sanitaire',
+    };
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PlaceholderScreen(title: labels[id] ?? id)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: TytoColors.nuit,
+      drawer: TytoDrawer(activeId: 'chat', onSelect: _onDrawerSelect),
       appBar: AppBar(
         backgroundColor: TytoColors.nuit,
         elevation: 0,
