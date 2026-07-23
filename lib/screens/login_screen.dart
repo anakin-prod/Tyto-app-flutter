@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.circle_outlined, color: TytoColors.fauve, size: 56),
+              Image.asset('assets/images/owl.png', width: 56, height: 56),
               const SizedBox(height: 14),
               Text('Tyto', style: TytoText.display(size: 30)),
               const SizedBox(height: 6),

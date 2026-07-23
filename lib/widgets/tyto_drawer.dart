@@ -3,6 +3,7 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import 'dotted_line_painter.dart';
+import '../screens/login_screen.dart';
 
 class DrawerItem {
   final String id;
@@ -62,7 +63,10 @@ class TytoDrawer extends StatelessWidget {
                             icon: Icons.star_border_rounded,
                             label: 'Nos offres',
                             sub: 'Découvrir Premium & Pro',
-                            onTap: () => Navigator.pop(context),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                            },
                           ),
                           _buildAction(
                             icon: Icons.logout_rounded,
@@ -92,7 +96,7 @@ class TytoDrawer extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(22, 18, 14, 14),
       child: Row(
         children: [
-          const Icon(Icons.circle_outlined, color: TytoColors.fauve, size: 30),
+          Image.asset('assets/images/owl.png', width: 30, height: 30),
           const SizedBox(width: 11),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

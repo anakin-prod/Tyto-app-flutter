@@ -59,7 +59,7 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.circle_outlined, color: TytoColors.fauve, size: 22),
+            Image.asset('assets/images/owl.png', width: 22, height: 22),
             const SizedBox(width: 10),
             Text('Tyto', style: TytoText.display(size: 20)),
           ],
