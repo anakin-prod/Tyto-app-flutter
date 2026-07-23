@@ -1,0 +1,13 @@
+workflows:
+  tyto-android-test:
+    name: Tyto — build de test Android
+    max_build_duration: 30
+    environment:
+      flutter: stable
+    scripts:
+      - name: Récupérer les dépendances
+        script: flutter pub get
+      - name: Construire un APK de test (non signé, pour tester rapidement)
+        script: flutter build apk --debug
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
