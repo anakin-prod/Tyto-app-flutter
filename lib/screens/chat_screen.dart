@@ -4,6 +4,10 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/tyto_drawer.dart';
 import 'placeholder_screen.dart';
+import 'pets_screen.dart';
+import 'carnet_screen.dart';
+import 'tableau_screen.dart';
+import 'veille_screen.dart';
 
 /// L'écran de chat, dans le même esprit que celui du site : en-tête avec
 /// le bouton urgence et le rafraîchissement, questions suggérées qui
@@ -123,16 +127,24 @@ class _ChatScreenState extends State<ChatScreen> {
   void _onDrawerSelect(String id) {
     Navigator.pop(context);
     if (id == 'chat') return;
-    final labels = {
-      'pets': 'Mes animaux',
-      'carnet': 'Carnet de santé',
-      'tableau': 'Tableau des rappels',
-      'veille': 'Veille sanitaire',
-    };
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => PlaceholderScreen(title: labels[id] ?? id)),
-    );
+    Widget screen;
+    switch (id) {
+      case 'pets':
+        screen = const PetsScreen();
+        break;
+      case 'carnet':
+        screen = const CarnetScreen();
+        break;
+      case 'tableau':
+        screen = const TableauScreen();
+        break;
+      case 'veille':
+        screen = const VeilleScreen();
+        break;
+      default:
+        screen = const PlaceholderScreen(title: 'Section');
+    }
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 
   @override
