@@ -31,6 +31,12 @@ class TytoApp extends StatelessWidget {
           secondary: TytoColors.fauve,
           surface: TytoColors.nuit2,
         ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: TytoColors.nuit,
+          surfaceTintColor: Colors.transparent, // sans ça, Flutter grise légèrement le fond
+          elevation: 0,
+          iconTheme: IconThemeData(color: TytoColors.fauve), // le bouton menu, la flèche retour...
+        ),
         textTheme: TextTheme(
           bodyMedium: TytoText.body(),
           titleLarge: TytoText.display(),

@@ -34,6 +34,19 @@ const _suggestionPool = [
   "Quels aliments sont toxiques pour un chat ?",
 ];
 
+// Le petit encart "Le savais-tu ?" au-dessus du champ de saisie, comme sur
+// le site — un fait amusant ou utile, qui change quand on tape dessus.
+const _funFacts = [
+  "Un chat ronronne aussi bien en inspirant qu'en expirant.",
+  "Les chiens peuvent sentir une odeur environ 40 fois mieux qu'un humain.",
+  "Les perruches peuvent apprendre plus de 100 mots.",
+  "Un lapin a besoin de ronger en permanence : ses dents poussent toute sa vie.",
+  "Les chats passent près de 70 % de leur vie à dormir.",
+  "Une tortue peut retenir sa respiration plus d'une heure sous l'eau.",
+  "Le cœur d'un chien bat entre 60 et 140 fois par minute selon sa taille.",
+  "Les chats ont un troisième œil : la membrane nictitante, qui protège leur regard.",
+];
+
 class _ChatScreenState extends State<ChatScreen> {
   final List<_Message> _thread = [];
   final _controller = TextEditingController();
@@ -43,6 +56,7 @@ class _ChatScreenState extends State<ChatScreen> {
   int? _remaining;
   bool _isPremium = false;
   bool _isPro = false;
+  int _factIdx = 0;
 
   final List<int> _chipIdx = [0, 1, 2];
   final List<bool> _chipVisible = [true, true, true];
@@ -55,10 +69,15 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _factIdx = DateTime.now().millisecond % _funFacts.length;
     _scheduleSlot(0, _showDuration);
     _scheduleSlot(1, _showDuration + _stagger);
     _scheduleSlot(2, _showDuration + _stagger * 2);
     _loadProfile();
+  }
+
+  void _nextFact() {
+    setState(() => _factIdx = (_factIdx + 1) % _funFacts.length);
   }
 
   Future<void> _loadProfile() async {
@@ -311,6 +330,30 @@ class _ChatScreenState extends State<ChatScreen> {
                       );
                     },
                   ),
+          ),
+          GestureDetector(
+            onTap: _nextFact,
+            child: Container(
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+              decoration: BoxDecoration(
+                color: TytoColors.nuit2,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: TytoColors.lune.withOpacity(0.12)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline_rounded, size: 16, color: TytoColors.fauve),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'Le savais-tu ? ${_funFacts[_factIdx]}',
+                      style: TytoText.ui(size: 12.5, color: TytoColors.brume),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
           SafeArea(
             top: false,
