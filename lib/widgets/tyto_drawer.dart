@@ -6,6 +6,7 @@ import '../services/billing_service.dart';
 import '../screens/login_screen.dart';
 import 'dotted_line_painter.dart';
 import 'tyto_icons.dart';
+import 'owl_sketch.dart';
 
 class DrawerItem {
   final String id;
@@ -194,7 +195,7 @@ class TytoDrawer extends StatelessWidget {
       child: Row(
         children: [
           // La chouette dessinée au trait, fond transparent : plus de carré.
-          TytoIcon.owl(size: 34, color: TytoColors.lune),
+          const OwlSketch(size: 28),
           const SizedBox(width: 11),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,

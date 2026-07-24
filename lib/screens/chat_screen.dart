@@ -4,6 +4,7 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/tyto_drawer.dart';
 import '../widgets/tyto_icons.dart';
+import '../widgets/owl_sketch.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/user_service.dart';
@@ -247,7 +248,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         titleSpacing: 4,
         title: Row(
           children: [
-            TytoIcon.owl(size: 26, color: TytoColors.lune),
+            const OwlSketch(size: 22),
             const SizedBox(width: 8),
             Text('Tyto', style: TytoText.display(size: 19)),
             if (_isPro || _isPremium) ...[
@@ -431,7 +432,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TytoIcon.owl(size: 70, color: TytoColors.lune),
+            const OwlSketch(size: 64),
             const SizedBox(height: 18),
             Text(
               "Que veux-tu savoir sur les animaux\naujourd'hui ?",

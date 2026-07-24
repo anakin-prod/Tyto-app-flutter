@@ -3,6 +3,7 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../widgets/tyto_icons.dart';
+import '../widgets/owl_sketch.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -56,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              TytoIcon.owl(size: 56, color: TytoColors.lune),
+              const OwlSketch(size: 52),
               const SizedBox(height: 14),
               Text('Tyto', style: TytoText.display(size: 30)),
               const SizedBox(height: 6),
@@ -120,7 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _signInWithGoogle,
-                    icon: const Icon(Icons.g_mobiledata, size: 22, color: TytoColors.lune),
+                    icon: const GoogleLogo(size: 18),
                     label: Text('Continuer avec Google', style: TytoText.ui(color: TytoColors.lune)),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: TytoColors.lune.withOpacity(0.2)),
