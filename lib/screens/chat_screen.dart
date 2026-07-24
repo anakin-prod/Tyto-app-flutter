@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/tyto_drawer.dart';
+import '../widgets/tyto_icons.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/user_service.dart';
@@ -47,7 +48,8 @@ const _funFacts = [
   "Les chats ont un troisième œil : la membrane nictitante, qui protège leur regard.",
 ];
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
   final List<_Message> _thread = [];
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
@@ -69,6 +71,10 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat(reverse: true);
     _factIdx = DateTime.now().millisecond % _funFacts.length;
     _scheduleSlot(0, _showDuration);
     _scheduleSlot(1, _showDuration + _stagger);
@@ -115,6 +121,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _pulse.dispose();
     for (final t in _chipTimers) {
       t?.cancel();
     }
@@ -240,7 +247,7 @@ class _ChatScreenState extends State<ChatScreen> {
         titleSpacing: 4,
         title: Row(
           children: [
-            Image.asset('assets/images/owl.png', width: 26, height: 26),
+            TytoIcon.owl(size: 26, color: TytoColors.lune),
             const SizedBox(width: 8),
             Text('Tyto', style: TytoText.display(size: 19)),
             if (_isPro || _isPremium) ...[
@@ -265,14 +272,32 @@ class _ChatScreenState extends State<ChatScreen> {
                 tooltip: 'Nouvelle conversation',
                 onPressed: _resetConversation,
               ),
-            TextButton.icon(
-              onPressed: _openSos,
-              icon: const Icon(Icons.warning_rounded, size: 14, color: Colors.white),
-              label: Text('URGENCE', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: Colors.white)),
-              style: TextButton.styleFrom(
-                backgroundColor: TytoColors.urgence,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (context, child) {
+                return Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: [
+                      BoxShadow(
+                        color: TytoColors.urgence.withOpacity(0.15 + 0.35 * _pulse.value),
+                        blurRadius: 6 + 10 * _pulse.value,
+                        spreadRadius: _pulse.value * 2,
+                      ),
+                    ],
+                  ),
+                  child: child,
+                );
+              },
+              child: TextButton.icon(
+                onPressed: _openSos,
+                icon: const Icon(Icons.warning_rounded, size: 14, color: Colors.white),
+                label: Text('URGENCE', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: Colors.white)),
+                style: TextButton.styleFrom(
+                  backgroundColor: TytoColors.urgence,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                ),
               ),
             ),
           ],
@@ -406,7 +431,7 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset('assets/images/owl.png', width: 70, height: 70),
+            TytoIcon.owl(size: 70, color: TytoColors.lune),
             const SizedBox(height: 18),
             Text(
               "Que veux-tu savoir sur les animaux\naujourd'hui ?",

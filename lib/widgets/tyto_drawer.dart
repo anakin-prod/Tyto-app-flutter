@@ -3,27 +3,43 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../services/billing_service.dart';
+import '../screens/login_screen.dart';
 import 'dotted_line_painter.dart';
+import 'tyto_icons.dart';
 
 class DrawerItem {
   final String id;
   final String label;
   final String sub;
-  final IconData icon;
-  const DrawerItem({required this.id, required this.label, required this.sub, required this.icon});
+  const DrawerItem({required this.id, required this.label, required this.sub});
 }
 
 const tytoDrawerItems = [
-  DrawerItem(id: 'chat', label: 'Chat', sub: 'Poser une question', icon: Icons.chat_bubble_outline_rounded),
-  DrawerItem(id: 'pets', label: 'Mes animaux', sub: 'Profils & compagnons', icon: Icons.pets_rounded),
-  DrawerItem(id: 'carnet', label: 'Carnet de santé', sub: 'Vaccins, poids, soins', icon: Icons.menu_book_rounded),
-  DrawerItem(id: 'tableau', label: 'Tableau des rappels', sub: 'Ce qui arrive bientôt', icon: Icons.checklist_rounded),
-  DrawerItem(id: 'veille', label: 'Veille sanitaire', sub: "L'analyse quotidienne", icon: Icons.monitor_heart_rounded),
+  DrawerItem(id: 'chat', label: 'Chat', sub: 'Poser une question'),
+  DrawerItem(id: 'pets', label: 'Mes animaux', sub: 'Profils & compagnons'),
+  DrawerItem(id: 'carnet', label: 'Carnet de santé', sub: 'Vaccins, poids, soins'),
+  DrawerItem(id: 'tableau', label: 'Tableau des rappels', sub: 'Ce qui arrive bientôt'),
+  DrawerItem(id: 'veille', label: 'Veille sanitaire', sub: "L'analyse quotidienne"),
 ];
 
-/// Le tiroir de navigation "ciel nocturne", maintenant avec le vrai statut
-/// Premium/Pro pour décider quoi afficher en bas (Nos offres, ou Gérer
-/// l'abonnement) — comme sur le site.
+/// L'icône de chaque rubrique — les mêmes que sur le site.
+Widget _iconFor(String id, {required double size, required Color color}) {
+  switch (id) {
+    case 'chat':
+      return TytoIcon.chat(size: size, color: color);
+    case 'pets':
+      return TytoIcon.owl(size: size, color: color);
+    case 'carnet':
+      return TytoIcon.notebook(size: size, color: color);
+    case 'tableau':
+      return TytoIcon.chart(size: size, color: color);
+    case 'veille':
+      return TytoIcon.monitor(size: size, color: color);
+    default:
+      return TytoIcon.chat(size: size, color: color);
+  }
+}
+
 class TytoDrawer extends StatelessWidget {
   final String activeId;
   final ValueChanged<String> onSelect;
@@ -41,8 +57,11 @@ class TytoDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subscribed = isPro || isPremium;
+    final signedIn = AuthService.isSignedIn;
+
     return Drawer(
       backgroundColor: Colors.transparent,
+      elevation: 0,
       child: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -50,11 +69,32 @@ class TytoDrawer extends StatelessWidget {
             end: Alignment.bottomCenter,
             colors: [TytoColors.nuit2, TytoColors.nuit],
           ),
-          border: Border(right: BorderSide(color: Color(0x33C99A55), width: 1)),
         ),
         child: Stack(
           children: [
             Positioned.fill(child: CustomPaint(painter: _StarsPainter())),
+            // le liseré doré du bord droit, comme sur le site
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: 0,
+              width: 3,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      TytoColors.fauve.withOpacity(0),
+                      TytoColors.fauve.withOpacity(0.67),
+                      TytoColors.fauve.withOpacity(0.67),
+                      TytoColors.fauve.withOpacity(0),
+                    ],
+                    stops: const [0.0, 0.2, 0.8, 1.0],
+                  ),
+                ),
+              ),
+            ),
             SafeArea(
               child: Column(
                 children: [
@@ -68,7 +108,7 @@ class TytoDrawer extends StatelessWidget {
                           if (subscribed)
                             _buildAction(
                               icon: Icons.settings_rounded,
-                              label: 'Gérer l\'abonnement',
+                              label: "Gérer l'abonnement",
                               sub: 'Facturation, résiliation',
                               onTap: () async {
                                 Navigator.pop(context);
@@ -86,15 +126,31 @@ class TytoDrawer extends StatelessWidget {
                                 BillingService.openOffers();
                               },
                             ),
-                          _buildAction(
-                            icon: Icons.logout_rounded,
-                            label: 'Se déconnecter',
-                            sub: 'Fermer ma session',
-                            onTap: () async {
-                              Navigator.pop(context);
-                              await AuthService.signOut();
-                            },
-                          ),
+                          // Un visiteur anonyme n'a rien à "déconnecter" :
+                          // on lui propose plutôt de créer son compte.
+                          if (signedIn)
+                            _buildAction(
+                              icon: Icons.logout_rounded,
+                              label: 'Se déconnecter',
+                              sub: AuthService.email ?? 'Fermer ma session',
+                              onTap: () async {
+                                Navigator.pop(context);
+                                await AuthService.signOut();
+                              },
+                            )
+                          else
+                            _buildAction(
+                              icon: Icons.login_rounded,
+                              label: 'Se connecter',
+                              sub: 'Retrouver mes animaux partout',
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                );
+                              },
+                            ),
                           if (subscribed) _buildBadge(),
                           const SizedBox(height: 12),
                         ],
@@ -137,7 +193,8 @@ class TytoDrawer extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(22, 18, 14, 14),
       child: Row(
         children: [
-          Image.asset('assets/images/owl.png', width: 30, height: 30),
+          // La chouette dessinée au trait, fond transparent : plus de carré.
+          TytoIcon.owl(size: 34, color: TytoColors.lune),
           const SizedBox(width: 11),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,15 +243,19 @@ class TytoDrawer extends StatelessWidget {
                       Container(
                         width: 32,
                         height: 32,
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: lit ? TytoColors.fauve.withOpacity(0.17) : TytoColors.nuit2,
-                          border: Border.all(color: lit ? TytoColors.fauve : TytoColors.lune.withOpacity(0.13), width: 1.5),
+                          border: Border.all(
+                            color: lit ? TytoColors.fauve : TytoColors.lune.withOpacity(0.13),
+                            width: 1.5,
+                          ),
                           boxShadow: lit
                               ? [BoxShadow(color: TytoColors.fauve.withOpacity(0.35), blurRadius: 14, spreadRadius: 2)]
                               : null,
                         ),
-                        child: Icon(item.icon, size: 16, color: lit ? TytoColors.fauve : TytoColors.brume),
+                        child: _iconFor(item.id, size: 16, color: lit ? TytoColors.fauve : TytoColors.brume),
                       ),
                       const SizedBox(width: 15),
                       Column(
@@ -222,7 +283,12 @@ class TytoDrawer extends StatelessWidget {
     );
   }
 
-  Widget _buildAction({required IconData icon, required String label, required String sub, required VoidCallback onTap}) {
+  Widget _buildAction({
+    required IconData icon,
+    required String label,
+    required String sub,
+    required VoidCallback onTap,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: InkWell(
@@ -247,12 +313,19 @@ class TytoDrawer extends StatelessWidget {
                 child: Icon(icon, size: 16, color: TytoColors.brume),
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: TytoText.ui(size: 14, weight: FontWeight.w600, color: TytoColors.lune.withOpacity(0.8))),
-                  Text(sub, style: TytoText.ui(size: 11, color: TytoColors.brume)),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: TytoText.ui(size: 14, weight: FontWeight.w600, color: TytoColors.lune.withOpacity(0.8))),
+                    Text(
+                      sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TytoText.ui(size: 11, color: TytoColors.brume),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

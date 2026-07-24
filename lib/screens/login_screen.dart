@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
+import '../widgets/tyto_icons.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -55,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/owl.png', width: 56, height: 56),
+              TytoIcon.owl(size: 56, color: TytoColors.lune),
               const SizedBox(height: 14),
               Text('Tyto', style: TytoText.display(size: 30)),
               const SizedBox(height: 6),

@@ -25,5 +25,15 @@ class AuthService {
 
   static Session? get currentSession => _client.auth.currentSession;
 
+  /// Vrai seulement si l'utilisateur a un VRAI compte (email ou Google).
+  /// Une session anonyme ne compte pas comme "connecté" : c'est juste la
+  /// session technique qui permet de discuter sans créer de compte.
+  static bool get isSignedIn {
+    final user = _client.auth.currentUser;
+    return user != null && user.isAnonymous != true;
+  }
+
+  static String? get email => _client.auth.currentUser?.email;
+
   static Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
 }
