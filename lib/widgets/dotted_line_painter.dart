@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Une ligne verticale en pointillés dorés — le "trajet de vol" qui relie
-/// chaque rubrique du tiroir, reprenant l'idée du site.
 class DottedLinePainter extends CustomPainter {
   final Color color;
   DottedLinePainter({required this.color});

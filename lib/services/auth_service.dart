@@ -7,8 +7,6 @@ class AuthService {
 
   static SupabaseClient get _client => Supabase.instance.client;
 
-  /// Envoie un lien de connexion à l'adresse email donnée.
-  /// L'utilisateur clique dessus, revient dans l'app, et se retrouve connecté.
   static Future<void> sendMagicLink(String email) async {
     await _client.auth.signInWithOtp(
       email: email,
@@ -16,7 +14,6 @@ class AuthService {
     );
   }
 
-  /// Ouvre l'écran de connexion Google natif du téléphone.
   static Future<void> signInWithGoogle() async {
     await _client.auth.signInWithOAuth(
       OAuthProvider.google,
@@ -28,6 +25,5 @@ class AuthService {
 
   static Session? get currentSession => _client.auth.currentSession;
 
-  /// Le flux qui prévient l'app à chaque changement (connecté / déconnecté).
   static Stream<AuthState> get onAuthStateChange => _client.auth.onAuthStateChange;
 }

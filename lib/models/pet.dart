@@ -1,7 +1,7 @@
 class Pet {
   final String id;
   final String name;
-  final String species; // chien | chat | lapin | oiseau | autre
+  final String species;
   final String? breed;
   final String? sex;
   final DateTime? birthdate;

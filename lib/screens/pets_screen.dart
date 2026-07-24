@@ -4,17 +4,12 @@ import '../theme/typography.dart';
 import '../widgets/tyto_tile.dart';
 import '../models/pet.dart';
 
-// Données d'exemple, le temps de brancher la vraie table Supabase "pets"
-// à une prochaine étape. La structure (nom, espèce, race, âge, poids)
-// correspond exactement à celle du site.
 final _samplePets = [
   Pet(id: '1', name: 'Max', species: 'chien', breed: 'Berger australien', birthdate: DateTime(2021, 3, 12), weightKg: 24.5),
   Pet(id: '2', name: 'Plume', species: 'oiseau', breed: 'Perruche', birthdate: DateTime(2023, 7, 2), weightKg: 0.04),
 ];
 
-IconData _speciesIcon(String s) {
-  return Icons.pets_rounded;
-}
+IconData _speciesIcon(String s) => Icons.pets_rounded;
 
 class PetsScreen extends StatelessWidget {
   const PetsScreen({super.key});

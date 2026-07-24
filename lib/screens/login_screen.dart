@@ -59,12 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 14),
               Text('Tyto', style: TytoText.display(size: 30)),
               const SizedBox(height: 6),
-              Text(
-                "L'IA du monde animal",
-                style: TytoText.ui(size: 13, color: TytoColors.brume),
-              ),
+              Text("L'IA du monde animal", style: TytoText.ui(size: 13, color: TytoColors.brume)),
               const SizedBox(height: 40),
-
               if (_linkSent) ...[
                 Container(
                   padding: const EdgeInsets.all(18),
@@ -90,10 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     filled: true,
                     fillColor: TytoColors.nuit2,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide.none,
-                    ),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -136,7 +129,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ],
-
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Text(_errorMessage!, style: TytoText.ui(size: 13, color: TytoColors.urgence), textAlign: TextAlign.center),

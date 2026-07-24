@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
+import '../services/billing_service.dart';
 import 'dotted_line_painter.dart';
-import '../screens/login_screen.dart';
 
 class DrawerItem {
   final String id;
@@ -21,19 +21,26 @@ const tytoDrawerItems = [
   DrawerItem(id: 'veille', label: 'Veille sanitaire', sub: "L'analyse quotidienne", icon: Icons.monitor_heart_rounded),
 ];
 
-/// Le tiroir de navigation, dans le même esprit "ciel nocturne" que le site :
-/// fond étoilé discret, rubriques reliées par un trajet en pointillé, la
-/// rubrique active illuminée. Utilise le Drawer natif de Flutter, donc le
-/// glissement depuis le bord et le bouton retour fonctionnent automatiquement
-/// — la partie "adaptée à Android" de la demande.
+/// Le tiroir de navigation "ciel nocturne", maintenant avec le vrai statut
+/// Premium/Pro pour décider quoi afficher en bas (Nos offres, ou Gérer
+/// l'abonnement) — comme sur le site.
 class TytoDrawer extends StatelessWidget {
   final String activeId;
   final ValueChanged<String> onSelect;
+  final bool isPro;
+  final bool isPremium;
 
-  const TytoDrawer({super.key, required this.activeId, required this.onSelect});
+  const TytoDrawer({
+    super.key,
+    required this.activeId,
+    required this.onSelect,
+    this.isPro = false,
+    this.isPremium = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final subscribed = isPro || isPremium;
     return Drawer(
       backgroundColor: Colors.transparent,
       child: Container(
@@ -47,7 +54,6 @@ class TytoDrawer extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // fond étoilé discret
             Positioned.fill(child: CustomPaint(painter: _StarsPainter())),
             SafeArea(
               child: Column(
@@ -59,15 +65,27 @@ class TytoDrawer extends StatelessWidget {
                         children: [
                           _buildRubriques(),
                           const Divider(height: 24, color: Color(0x14EDE7D6)),
-                          _buildAction(
-                            icon: Icons.star_border_rounded,
-                            label: 'Nos offres',
-                            sub: 'Découvrir Premium & Pro',
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
-                            },
-                          ),
+                          if (subscribed)
+                            _buildAction(
+                              icon: Icons.settings_rounded,
+                              label: 'Gérer l\'abonnement',
+                              sub: 'Facturation, résiliation',
+                              onTap: () async {
+                                Navigator.pop(context);
+                                final token = AuthService.currentSession?.accessToken;
+                                if (token != null) await BillingService.openPortal(token);
+                              },
+                            )
+                          else
+                            _buildAction(
+                              icon: Icons.star_border_rounded,
+                              label: 'Nos offres',
+                              sub: 'Découvrir Premium & Pro',
+                              onTap: () {
+                                Navigator.pop(context);
+                                BillingService.openOffers();
+                              },
+                            ),
                           _buildAction(
                             icon: Icons.logout_rounded,
                             label: 'Se déconnecter',
@@ -77,6 +95,7 @@ class TytoDrawer extends StatelessWidget {
                               await AuthService.signOut();
                             },
                           ),
+                          if (subscribed) _buildBadge(),
                           const SizedBox(height: 12),
                         ],
                       ),
@@ -86,6 +105,28 @@ class TytoDrawer extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge() {
+    final color = isPro ? TytoColors.vert : TytoColors.fauve;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+            border: Border.all(color: color.withOpacity(0.5)),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            isPro ? 'COMPTE PRO' : 'COMPTE PREMIUM',
+            style: TytoText.ui(size: 11, weight: FontWeight.w700, color: color),
+          ),
         ),
       ),
     );
@@ -221,7 +262,6 @@ class TytoDrawer extends StatelessWidget {
   }
 }
 
-/// Un semis d'étoiles discrètes, à des positions fixes (comme sur le site).
 class _StarsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

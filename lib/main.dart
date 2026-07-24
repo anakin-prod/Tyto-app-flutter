@@ -65,10 +65,7 @@ class _AuthGateState extends State<_AuthGate> {
     if (AuthService.currentSession == null) {
       try {
         await Supabase.instance.client.auth.signInAnonymously();
-      } catch (_) {
-        // Si ça échoue (pas de réseau, etc.), on affiche quand même l'app —
-        // le chat gérera l'absence de session à ce moment-là.
-      }
+      } catch (_) {}
     }
     if (mounted) setState(() => _ready = true);
   }
@@ -84,4 +81,3 @@ class _AuthGateState extends State<_AuthGate> {
     return const ChatScreen();
   }
 }
-

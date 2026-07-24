@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 
-/// Une ligne avec médaillon d'icône + titre + sous-titre, dans le même
-/// esprit que les rubriques du tiroir — pour que tous les écrans se
-/// ressemblent, sans réécrire le style à chaque fois.
 class TytoTile extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -71,7 +68,6 @@ class TytoTile extends StatelessWidget {
   }
 }
 
-/// Un état "vide" cohérent, réutilisé sur chaque écran de liste.
 class TytoEmptyState extends StatelessWidget {
   final IconData icon;
   final String message;

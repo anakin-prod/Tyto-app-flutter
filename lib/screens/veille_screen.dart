@@ -18,7 +18,6 @@ class _VeilleScreenState extends State<VeilleScreen> {
       _loading = true;
       _result = null;
     });
-    // Simulation le temps de brancher le vrai appel à une prochaine étape.
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
     setState(() {

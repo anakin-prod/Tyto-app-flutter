@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fond uni de lancement — couleur exacte du thème (#151C2C).
-     Contrairement à la version PWA, ici on garde le plein contrôle :
-     pas de risque de "carré" autour du logo. L'icône elle-même sera
-     ajoutée à l'étape suivante, une fois ce squelette validé. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:drawable="@color/launch_background_color"/>
 </layer-list>

@@ -37,8 +37,7 @@ class CarnetScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final events = List<HealthEvent>.from(_sampleEvents)
-      ..sort((a, b) => b.eventDate.compareTo(a.eventDate));
+    final events = List<HealthEvent>.from(_sampleEvents)..sort((a, b) => b.eventDate.compareTo(a.eventDate));
 
     return Scaffold(
       backgroundColor: TytoColors.nuit,

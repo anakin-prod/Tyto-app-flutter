@@ -1,7 +1,7 @@
 class HealthEvent {
   final String id;
   final String petId;
-  final String type; // vaccin | poids | vermifuge | visite | traitement
+  final String type;
   final DateTime eventDate;
   final DateTime? nextDue;
   final double? valueNum;

@@ -14,26 +14,30 @@ class ChatService {
     required String accessToken,
     required List<Map<String, String>> messages,
   }) async {
-    final res = await http.post(
-      Uri.parse('$_baseUrl/api/chat'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $accessToken',
-      },
-      body: jsonEncode({'messages': messages}),
-    );
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/api/chat'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({'messages': messages}),
+      );
 
-    final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
 
-    if (res.statusCode != 200) {
-      return ChatResult.error(data['error'] as String? ?? 'server');
+      if (res.statusCode != 200) {
+        return ChatResult.error(data['error'] as String? ?? 'server');
+      }
+
+      return ChatResult(
+        text: data['text'] as String,
+        remaining: data['remaining'] as int?,
+        premium: data['premium'] as bool?,
+      );
+    } catch (e) {
+      return ChatResult.error('network');
     }
-
-    return ChatResult(
-      text: data['text'] as String,
-      remaining: data['remaining'] as int,
-      premium: data['premium'] as bool,
-    );
   }
 }
 

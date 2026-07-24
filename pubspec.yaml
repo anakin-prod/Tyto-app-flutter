@@ -12,6 +12,7 @@ dependencies:
   google_fonts: ^6.2.1       # charge Fraunces, Newsreader, Karla automatiquement
   http: ^1.2.1               # appels vers l'API de tytoai.app (le site déjà en place)
   supabase_flutter: ^2.6.0   # connexion (lien magique / Google), même compte que le site
+  url_launcher: ^6.3.0       # ouvre les pages de paiement Stripe dans le navigateur
   shared_preferences: ^2.2.3 # mémorise la session utilisateur sur l'appareil
   cupertino_icons: ^1.0.8
 

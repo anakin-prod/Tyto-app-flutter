@@ -16,10 +16,7 @@ class PlaceholderScreen extends StatelessWidget {
         title: Text(title, style: TytoText.display(size: 18)),
       ),
       body: Center(
-        child: Text(
-          "$title arrive bientôt.",
-          style: TytoText.body(size: 15, color: TytoColors.brume),
-        ),
+        child: Text("$title arrive bientôt.", style: TytoText.body(size: 15, color: TytoColors.brume)),
       ),
     );
   }
