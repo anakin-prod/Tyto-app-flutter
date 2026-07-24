@@ -5,6 +5,8 @@ import '../theme/typography.dart';
 import '../widgets/tyto_drawer.dart';
 import '../widgets/tyto_icons.dart';
 import '../widgets/owl_sketch.dart';
+import '../widgets/paw_trails.dart';
+import 'emergency_sheet.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/user_service.dart';
@@ -195,21 +197,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   void _resetConversation() => setState(() => _thread.clear());
 
   void _openSos() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: TytoColors.nuit2,
-        title: Text('Urgence', style: TytoText.display(size: 18)),
-        content: Text(
-          "L'écran d'urgence détaillé arrivera à une prochaine étape.",
-          style: TytoText.body(size: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Fermer', style: TytoText.ui(color: TytoColors.fauve)),
-          ),
-        ],
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => const EmergencySheet(),
       ),
     );
   }
@@ -276,35 +268,33 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             AnimatedBuilder(
               animation: _pulse,
               builder: (context, child) {
-                return Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: [
-                      BoxShadow(
-                        color: TytoColors.urgence.withOpacity(0.15 + 0.35 * _pulse.value),
-                        blurRadius: 6 + 10 * _pulse.value,
-                        spreadRadius: _pulse.value * 2,
-                      ),
-                    ],
+                // On fait respirer la couleur du bouton plutôt que d'ajouter
+                // une ombre : une ombre débordait du cadre de l'en-tête et
+                // laissait voir un carré rouge autour du bouton.
+                return TextButton.icon(
+                  onPressed: _openSos,
+                  icon: const Icon(Icons.warning_rounded, size: 14, color: Colors.white),
+                  label: Text('URGENCE',
+                      style: TytoText.ui(size: 11, weight: FontWeight.w700, color: Colors.white)),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Color.lerp(
+                      TytoColors.urgence,
+                      const Color(0xFFE07A63),
+                      _pulse.value,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                   ),
-                  child: child,
                 );
               },
-              child: TextButton.icon(
-                onPressed: _openSos,
-                icon: const Icon(Icons.warning_rounded, size: 14, color: Colors.white),
-                label: Text('URGENCE', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: Colors.white)),
-                style: TextButton.styleFrom(
-                  backgroundColor: TytoColors.urgence,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-                ),
-              ),
             ),
           ],
         ),
       ),
-      body: Column(
+      body: Stack(
+        children: [
+          const Positioned.fill(child: PawTrails()),
+          Column(
         children: [
           if (_remaining != null && !_isPremium && !_isPro)
             Padding(
@@ -420,6 +410,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               ),
             ),
           ),
+        ],
+      ),
         ],
       ),
     );

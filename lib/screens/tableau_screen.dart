@@ -5,6 +5,8 @@ import '../widgets/tyto_tile.dart';
 import '../models/health_event.dart';
 import '../models/pet.dart';
 import '../services/data_service.dart';
+import '../services/auth_service.dart';
+import '../widgets/account_gate.dart';
 
 String _typeLabel(String t) {
   switch (t) {
@@ -40,6 +42,10 @@ class _TableauScreenState extends State<TableauScreen> {
   }
 
   Future<void> _load() async {
+    if (!AuthService.isSignedIn) {
+      setState(() => _loading = false);
+      return;
+    }
     setState(() => _loading = true);
     try {
       final results = await Future.wait([
@@ -66,7 +72,9 @@ class _TableauScreenState extends State<TableauScreen> {
     return Scaffold(
       backgroundColor: TytoColors.nuit,
       appBar: AppBar(title: Text('Tableau des rappels', style: TytoText.display(size: 19))),
-      body: _loading
+      body: !AuthService.isSignedIn
+          ? const AccountGate()
+          : _loading
           ? const Center(child: CircularProgressIndicator(color: TytoColors.fauve))
           : _upcoming.isEmpty
               ? const TytoEmptyState(

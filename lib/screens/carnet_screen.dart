@@ -5,6 +5,8 @@ import '../widgets/tyto_tile.dart';
 import '../models/pet.dart';
 import '../models/health_event.dart';
 import '../services/data_service.dart';
+import '../services/auth_service.dart';
+import '../widgets/account_gate.dart';
 
 const _eventTypes = ['vaccin', 'poids', 'vermifuge', 'visite', 'traitement'];
 
@@ -53,22 +55,49 @@ class CarnetScreen extends StatefulWidget {
 
 class _CarnetScreenState extends State<CarnetScreen> {
   List<HealthEvent> _events = [];
+  List<Pet> _pets = [];
+  Pet? _selected;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    _selected = widget.pet;
     _load();
   }
 
   Future<void> _load() async {
-    if (widget.pet == null) {
+    if (!AuthService.isSignedIn) {
       setState(() => _loading = false);
       return;
     }
     setState(() => _loading = true);
     try {
-      final events = await DataService.loadEvents(widget.pet!.id);
+      // On charge la liste des compagnons pour pouvoir passer de l'un à
+      // l'autre depuis le carnet, comme sur le site.
+      final pets = await DataService.loadPets();
+      final choisi = _selected ?? (pets.isNotEmpty ? pets.first : null);
+      final events = choisi == null ? <HealthEvent>[] : await DataService.loadEvents(choisi.id);
+      if (!mounted) return;
+      setState(() {
+        _pets = pets;
+        _selected = choisi;
+        _events = events;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _selectPet(Pet p) async {
+    setState(() {
+      _selected = p;
+      _loading = true;
+    });
+    try {
+      final events = await DataService.loadEvents(p.id);
       if (!mounted) return;
       setState(() {
         _events = events;
@@ -80,26 +109,64 @@ class _CarnetScreenState extends State<CarnetScreen> {
     }
   }
 
+  /// Les pastilles permettant de passer d'un compagnon à l'autre.
+  Widget _petSelector() {
+    if (_pets.length < 2) return const SizedBox.shrink();
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _pets.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final p = _pets[i];
+          final on = p.id == _selected?.id;
+          return GestureDetector(
+            onTap: () => _selectPet(p),
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: on ? TytoColors.fauve.withOpacity(0.18) : TytoColors.nuit2,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: on ? TytoColors.fauve : TytoColors.lune.withOpacity(0.12)),
+              ),
+              child: Text(
+                p.name,
+                style: TytoText.ui(
+                  size: 13.5,
+                  weight: on ? FontWeight.w700 : FontWeight.w500,
+                  color: on ? TytoColors.fauve : TytoColors.brume,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _openForm() async {
-    if (widget.pet == null) return;
+    if (_selected == null) return;
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _EventForm(petId: widget.pet!.id),
+      builder: (_) => _EventForm(petId: _selected!.id),
     );
     if (saved == true) _load();
   }
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.pet == null ? 'Carnet de santé' : 'Carnet · ${widget.pet!.name}';
+    final title = _selected == null ? 'Carnet de santé' : 'Carnet · ${_selected!.name}';
     return Scaffold(
       backgroundColor: TytoColors.nuit,
       appBar: AppBar(
         title: Text(title, style: TytoText.display(size: 18)),
         actions: [
-          if (widget.pet != null)
+          if (_selected != null)
             IconButton(
               icon: const Icon(Icons.add_rounded, color: TytoColors.fauve),
               tooltip: 'Ajouter au carnet',
@@ -107,40 +174,51 @@ class _CarnetScreenState extends State<CarnetScreen> {
             ),
         ],
       ),
-      body: widget.pet == null
-          ? const TytoEmptyState(
-              icon: Icons.menu_book_rounded,
-              message: "Choisis d'abord un compagnon dans « Mes animaux »\npour voir son carnet de santé.",
-            )
+      body: !AuthService.isSignedIn
+          ? const AccountGate()
           : _loading
               ? const Center(child: CircularProgressIndicator(color: TytoColors.fauve))
-              : _events.isEmpty
+              : _pets.isEmpty
                   ? const TytoEmptyState(
                       icon: Icons.menu_book_rounded,
-                      message: "Aucun événement enregistré.\nAjoute un vaccin, une pesée ou une visite avec le bouton +.",
+                      message: "Ajoute d'abord un compagnon dans « Mes animaux »\npour ouvrir son carnet de santé.",
                     )
-                  : RefreshIndicator(
-                      color: TytoColors.fauve,
-                      backgroundColor: TytoColors.nuit2,
-                      onRefresh: _load,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _events.length,
-                        itemBuilder: (context, i) {
-                          final e = _events[i];
-                          final parts = [
-                            _fmt(e.eventDate),
-                            if (e.nextDue != null) 'Rappel : ${_fmt(e.nextDue!)}',
-                            if (e.notes != null) e.notes!,
-                          ];
-                          return TytoTile(
-                            icon: _typeIcon(e.type),
-                            title: _typeLabel(e.type),
-                            subtitle: parts.join(' · '),
-                            trailing: e.valueNum != null ? '${e.valueNum} kg' : null,
-                          );
-                        },
-                      ),
+                  : Column(
+                      children: [
+                        const SizedBox(height: 8),
+                        _petSelector(),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: _events.isEmpty
+                              ? const TytoEmptyState(
+                                  icon: Icons.menu_book_rounded,
+                                  message: "Aucun événement enregistré.\nAjoute un vaccin, une pesée ou une visite avec le bouton +.",
+                                )
+                              : RefreshIndicator(
+                                  color: TytoColors.fauve,
+                                  backgroundColor: TytoColors.nuit2,
+                                  onRefresh: _load,
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: _events.length,
+                                    itemBuilder: (context, i) {
+                                      final e = _events[i];
+                                      final parts = [
+                                        _fmt(e.eventDate),
+                                        if (e.nextDue != null) 'Rappel : ${_fmt(e.nextDue!)}',
+                                        if (e.notes != null) e.notes!,
+                                      ];
+                                      return TytoTile(
+                                        icon: _typeIcon(e.type),
+                                        title: _typeLabel(e.type),
+                                        subtitle: parts.join(' · '),
+                                        trailing: e.valueNum != null ? '${e.valueNum} kg' : null,
+                                      );
+                                    },
+                                  ),
+                                ),
+                        ),
+                      ],
                     ),
     );
   }

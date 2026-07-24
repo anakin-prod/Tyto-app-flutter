@@ -5,6 +5,7 @@ import 'theme/colors.dart';
 import 'theme/typography.dart';
 import 'screens/chat_screen.dart';
 import 'services/auth_service.dart';
+import 'widgets/owl_sketch.dart';
 
 // ⚠️ Ce ne sont PAS des clés secrètes, elles sont faites pour être publiques.
 const String supabaseUrl = 'https://wtmlzrtbsxlwyxpnimee.supabase.co';
@@ -99,9 +100,35 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   Widget build(BuildContext context) {
     if (!_ready) {
-      return const Scaffold(
+      // Le même écran d'attente que le site : on dit déjà qui on est,
+      // plutôt que de laisser un écran vide.
+      return Scaffold(
         backgroundColor: TytoColors.nuit,
-        body: Center(child: CircularProgressIndicator(color: TytoColors.fauve)),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const OwlSketch(size: 76),
+                const SizedBox(height: 14),
+                Text('Tyto', style: TytoText.display(size: 30)),
+                const SizedBox(height: 8),
+                Text(
+                  "L'IA du monde animal",
+                  textAlign: TextAlign.center,
+                  style: TytoText.body(size: 16.5, color: TytoColors.brume)
+                      .copyWith(fontStyle: FontStyle.italic, height: 1.5),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Gratuit, sans inscription',
+                  style: TytoText.ui(size: 12.5, color: TytoColors.brume.withOpacity(0.75)),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
     return const ChatScreen();

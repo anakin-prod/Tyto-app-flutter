@@ -4,7 +4,8 @@ import '../theme/typography.dart';
 import '../widgets/tyto_tile.dart';
 import '../models/pet.dart';
 import '../services/data_service.dart';
-import 'carnet_screen.dart';
+import '../services/auth_service.dart';
+import '../widgets/account_gate.dart';
 
 const _speciesOptions = ['chien', 'chat', 'lapin', 'oiseau', 'rongeur', 'reptile', 'autre'];
 
@@ -88,14 +89,17 @@ class _PetsScreenState extends State<PetsScreen> {
       appBar: AppBar(
         title: Text('Mes animaux', style: TytoText.display(size: 19)),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add_rounded, color: TytoColors.fauve),
-            tooltip: 'Ajouter un compagnon',
-            onPressed: () => _openForm(),
-          ),
+          if (AuthService.isSignedIn)
+            IconButton(
+              icon: const Icon(Icons.add_rounded, color: TytoColors.fauve),
+              tooltip: 'Ajouter un compagnon',
+              onPressed: () => _openForm(),
+            ),
         ],
       ),
-      body: _loading
+      body: !AuthService.isSignedIn
+          ? const AccountGate()
+          : _loading
           ? const Center(child: CircularProgressIndicator(color: TytoColors.fauve))
           : _pets.isEmpty
               ? const TytoEmptyState(
@@ -124,10 +128,7 @@ class _PetsScreenState extends State<PetsScreen> {
                           title: p.name,
                           subtitle: parts.join(' · '),
                           trailing: p.weightKg != null ? '${p.weightKg} kg' : null,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => CarnetScreen(pet: p)),
-                          ),
+                          onTap: () => _openForm(pet: p),
                         ),
                       );
                     },

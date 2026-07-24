@@ -4,6 +4,8 @@ import '../theme/typography.dart';
 import '../models/pet.dart';
 import '../models/health_event.dart';
 import '../services/data_service.dart';
+import '../services/auth_service.dart';
+import '../widgets/account_gate.dart';
 import '../widgets/tyto_icons.dart';
 
 class VeilleScreen extends StatefulWidget {
@@ -26,6 +28,10 @@ class _VeilleScreenState extends State<VeilleScreen> {
   }
 
   Future<void> _load() async {
+    if (!AuthService.isSignedIn) {
+      setState(() => _loading = false);
+      return;
+    }
     try {
       final pets = await DataService.loadPets();
       if (!mounted) return;
@@ -111,7 +117,9 @@ class _VeilleScreenState extends State<VeilleScreen> {
     return Scaffold(
       backgroundColor: TytoColors.nuit,
       appBar: AppBar(title: Text('Veille sanitaire', style: TytoText.display(size: 19))),
-      body: _loading
+      body: !AuthService.isSignedIn
+          ? const AccountGate()
+          : _loading
           ? const Center(child: CircularProgressIndicator(color: TytoColors.fauve))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
