@@ -12,8 +12,19 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "1"
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode") ?: "5"
 def flutterVersionName = localProperties.getProperty("flutter.versionName") ?: "1.0.0"
+
+// La vraie signature (ta clé du 20 juillet), lue depuis key.properties.
+// Ce fichier n'est jamais dans le dépôt Git — Codemagic le crée lui-même
+// au moment du build, à partir de tes identifiants stockés chez eux de
+// façon chiffrée.
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+def hasReleaseSigning = keystorePropertiesFile.exists()
+if (hasReleaseSigning) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
 
 android {
     namespace "app.tytoai.twa"
@@ -43,13 +54,22 @@ android {
         versionName flutterVersionName
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // Pour l'instant on signe avec la clé de debug, le temps de
-            // faire les premiers tests. On mettra la vraie clé de signature
-            // (celle du 20 juillet) uniquement au moment de publier pour de
-            // vrai sur le Play Store.
-            signingConfig signingConfigs.debug
+            // La vraie clé si elle est disponible (build de publication),
+            // sinon la clé de debug (build de test rapide, comme avant).
+            signingConfig hasReleaseSigning ? signingConfigs.release : signingConfigs.debug
         }
     }
 }

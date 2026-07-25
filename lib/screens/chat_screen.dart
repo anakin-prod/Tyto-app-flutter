@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/tyto_drawer.dart';
@@ -53,6 +54,7 @@ const _funFacts = [
 
 class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
+  StreamSubscription<AuthState>? _authSub;
   final List<_Message> _thread = [];
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
@@ -83,6 +85,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     _scheduleSlot(1, _showDuration + _stagger);
     _scheduleSlot(2, _showDuration + _stagger * 2);
     _loadProfile();
+    // Quand l'utilisateur se connecte (ou se déconnecte), son plan change :
+    // sans ça, le badge resterait figé sur l'ancien statut.
+    _authSub = AuthService.onAuthStateChange.listen((_) {
+      if (mounted) _loadProfile();
+    });
   }
 
   void _nextFact() {
@@ -124,6 +131,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    _authSub?.cancel();
     _pulse.dispose();
     for (final t in _chipTimers) {
       t?.cancel();

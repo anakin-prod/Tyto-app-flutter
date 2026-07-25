@@ -24,9 +24,14 @@ class UserService {
       );
       if (res.statusCode != 200) return UserProfile.free();
       final data = jsonDecode(res.body) as Map<String, dynamic>;
+      // On lit exactement comme le site : "effectivePlan" est le plan qui
+      // s'applique réellement (il tient compte d'un accès Pro via une
+      // équipe), alors que "plan" n'est que l'abonnement payé en propre.
+      final effectif = (data['effectivePlan'] ?? data['plan'] ?? 'free').toString();
+      final pro = data['pro'] == true || effectif == 'pro';
       return UserProfile(
-        premium: data['premium'] == true || data['plan'] == 'premium' || data['plan'] == 'pro',
-        pro: data['pro'] == true || data['plan'] == 'pro',
+        premium: pro || data['premium'] == true || effectif == 'premium',
+        pro: pro,
         remaining: data['remaining'] is int ? data['remaining'] as int : null,
       );
     } catch (e) {

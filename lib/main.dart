@@ -5,7 +5,6 @@ import 'theme/colors.dart';
 import 'theme/typography.dart';
 import 'screens/chat_screen.dart';
 import 'services/auth_service.dart';
-import 'widgets/owl_sketch.dart';
 
 // ⚠️ Ce ne sont PAS des clés secrètes, elles sont faites pour être publiques.
 const String supabaseUrl = 'https://wtmlzrtbsxlwyxpnimee.supabase.co';
@@ -96,51 +95,21 @@ class _AuthGateState extends State<_AuthGate> {
   }
 
   Future<void> _ensureSession() async {
-    // On laisse l'écran d'accueil visible au moins le temps de le lire,
-    // même quand la session est déjà prête instantanément.
-    final minimum = Future.delayed(const Duration(milliseconds: 2200));
     if (AuthService.currentSession == null) {
       try {
         await Supabase.instance.client.auth.signInAnonymously();
       } catch (_) {}
     }
-    await minimum;
     if (mounted) setState(() => _ready = true);
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_ready) {
-      // Le même écran d'attente que le site : on dit déjà qui on est,
-      // plutôt que de laisser un écran vide.
-      return Scaffold(
-        backgroundColor: TytoColors.nuit,
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const OwlSketch(size: 76),
-                const SizedBox(height: 14),
-                Text('Tyto', style: TytoText.display(size: 30)),
-                const SizedBox(height: 8),
-                Text(
-                  "L'IA du monde animal",
-                  textAlign: TextAlign.center,
-                  style: TytoText.body(size: 16.5, color: TytoColors.brume)
-                      .copyWith(fontStyle: FontStyle.italic, height: 1.5),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Gratuit, sans inscription',
-                  style: TytoText.ui(size: 12.5, color: TytoColors.brume.withOpacity(0.75)),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
+      // Volontairement vide : l'écran de lancement d'Android (logo + phrase)
+      // est encore affiché à cet instant. Y remettre un logo ferait croire
+      // à un second démarrage.
+      return const Scaffold(backgroundColor: TytoColors.nuit, body: SizedBox.shrink());
     }
     return const ChatScreen();
   }
