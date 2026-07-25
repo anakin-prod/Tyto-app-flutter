@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
@@ -17,6 +19,28 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _sending = false;
   bool _linkSent = false;
   String? _errorMessage;
+  StreamSubscription<AuthState>? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    // Dès que la connexion aboutit (retour de Google ou clic sur le lien
+    // reçu par email), on referme cet écran : sans ça, l'utilisateur
+    // revenait sur la page de connexion et croyait que ça avait échoué.
+    _sub = AuthService.onAuthStateChange.listen((state) {
+      if (!mounted) return;
+      if (AuthService.isSignedIn) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _emailController.dispose();
+    super.dispose();
+  }
 
   Future<void> _sendMagicLink() async {
     final email = _emailController.text.trim();

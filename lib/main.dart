@@ -78,7 +78,14 @@ class _AuthGateState extends State<_AuthGate> {
     // aussitôt une anonyme : l'app doit TOUJOURS avoir une session valide,
     // sinon le chat se retrouve bloqué sur "connexion en cours".
     _sub = AuthService.onAuthStateChange.listen((state) {
-      if (state.session == null) _ensureSession();
+      if (state.session != null) {
+        // Une vraie connexion a abouti : le marqueur peut être levé.
+        AuthService.oauthEnCours = false;
+        return;
+      }
+      // Pas de session — sauf si une connexion Google est en train de se
+      // faire : dans ce cas, créer une session anonyme l'annulerait.
+      if (!AuthService.oauthEnCours) _ensureSession();
     });
   }
 

@@ -14,11 +14,26 @@ class AuthService {
     );
   }
 
+  /// Vrai pendant qu'une connexion Google est en cours (le temps que
+  /// l'utilisateur choisisse son compte dans le navigateur et revienne).
+  /// Sans ce marqueur, l'app recréerait une session anonyme entre-temps
+  /// et annulerait la connexion en train de se faire.
+  static bool oauthEnCours = false;
+
   static Future<void> signInWithGoogle() async {
-    await _client.auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: _redirectTo,
-    );
+    oauthEnCours = true;
+    try {
+      await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: _redirectTo,
+      );
+    } catch (e) {
+      oauthEnCours = false;
+      rethrow;
+    }
+    // Filet de sécurité : si l'utilisateur abandonne dans le navigateur,
+    // on ne reste pas bloqué en « connexion en cours » indéfiniment.
+    Future.delayed(const Duration(minutes: 3), () => oauthEnCours = false);
   }
 
   static Future<void> signOut() => _client.auth.signOut();
