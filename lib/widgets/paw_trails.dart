@@ -1,20 +1,22 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../theme/colors.dart';
 
 /// Les empreintes qui traversent le fond, reprises de components/PawTrails.js.
-/// Quelques traces apparaissent, se suivent, s'effacent, puis une autre piste
-/// démarre ailleurs avec une autre espèce et une autre direction.
-/// Purement décoratif : cette couche ne capte aucun clic.
+///
+/// Une seule horloge pilote toute la scène et calcule l'opacité de chaque
+/// empreinte à partir de son âge. Chaque empreinte n'a donc pas d'animation
+/// propre : impossible qu'elles se désynchronisent ou se coupent entre elles.
 
 const double _opacite = 0.4;
 const double _taille = 30;
-const int _dureeSec = 5; // temps qu'une empreinte reste visible
-const int _intervalleSec = 4; // temps entre deux nouvelles pistes
+const int _dureeMs = 5000; // temps qu'une empreinte reste visible
+const int _intervalleMs = 4000; // temps entre deux nouvelles pistes
+const int _vieMs = _dureeMs + 4000; // au bout de quoi la piste est retirée
 const double _ecartMini = 26; // distance minimale entre deux pistes actives
 
-// Les empreintes, une par espèce — mêmes tracés que sur le site.
 const _patteChat = '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#EDE7D6">
   <ellipse cx="12" cy="16.5" rx="5.6" ry="4.6" />
@@ -57,12 +59,12 @@ const _patteLapin = '''
 const _especes = [_patteChat, _patteChien, _patteOiseau, _patteCheval, _patteLapin];
 
 class _Piste {
-  final int id;
+  final int naissanceMs;
   final int especeIdx;
   final double x0, y0, angle, ecart, lateral;
   final int n;
   _Piste({
-    required this.id,
+    required this.naissanceMs,
     required this.especeIdx,
     required this.x0,
     required this.y0,
@@ -83,29 +85,41 @@ class PawTrails extends StatefulWidget {
 class _PawTrailsState extends State<PawTrails> {
   final List<_Piste> _pistes = [];
   final _rnd = Random();
-  int _cle = 0;
+  final _horloge = Stopwatch()..start();
+  Timer? _rafraichir;
+  Timer? _naissance;
   bool _actif = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       // On respecte le réglage système « réduire les animations ».
       if (MediaQuery.of(context).disableAnimations) {
         setState(() => _actif = false);
         return;
       }
-      _nouvellePiste();
-      _boucle();
+      _ajouterPiste();
+      // Une seule horloge redessine la scène ; l'opacité de chaque
+      // empreinte se déduit de son âge, rien n'est animé séparément.
+      _rafraichir = Timer.periodic(const Duration(milliseconds: 60), (_) {
+        if (!mounted) return;
+        setState(() {
+          _pistes.removeWhere((p) => _horloge.elapsedMilliseconds - p.naissanceMs > _vieMs);
+        });
+      });
+      _naissance = Timer.periodic(const Duration(milliseconds: _intervalleMs), (_) {
+        if (mounted) _ajouterPiste();
+      });
     });
   }
 
-  void _boucle() {
-    Future.delayed(const Duration(seconds: _intervalleSec), () {
-      if (!mounted || !_actif) return;
-      _nouvellePiste();
-      _boucle();
-    });
+  @override
+  void dispose() {
+    _rafraichir?.cancel();
+    _naissance?.cancel();
+    super.dispose();
   }
 
   _Piste _tirerPiste() {
@@ -122,7 +136,7 @@ class _PawTrailsState extends State<PawTrails> {
     final minY = max(2.0, 2 - porteeY);
     final maxY = min(88.0, 88 - porteeY);
     return _Piste(
-      id: _cle++,
+      naissanceMs: _horloge.elapsedMilliseconds,
       especeIdx: _rnd.nextInt(_especes.length),
       x0: minX + _rnd.nextDouble() * max(0.0, maxX - minX),
       y0: minY + _rnd.nextDouble() * max(0.0, maxY - minY),
@@ -133,7 +147,7 @@ class _PawTrailsState extends State<PawTrails> {
     );
   }
 
-  void _nouvellePiste() {
+  void _ajouterPiste() {
     // On essaie plusieurs emplacements et on garde le plus éloigné des
     // pistes déjà en cours, pour éviter qu'elles se chevauchent.
     _Piste? choisie;
@@ -153,15 +167,23 @@ class _PawTrailsState extends State<PawTrails> {
     }
     if (choisie == null || !mounted) return;
     setState(() => _pistes.add(choisie!));
-    Future.delayed(const Duration(seconds: _dureeSec + 4), () {
-      if (!mounted) return;
-      setState(() => _pistes.removeWhere((q) => q.id == choisie!.id));
-    });
+  }
+
+  /// Les étapes de l'animation « pasEmpreinte » du site :
+  /// 0 % invisible → 18 % visible → 62 % visible → 100 % invisible.
+  double _opaciteA(int ageMs) {
+    if (ageMs < 0 || ageMs > _dureeMs) return 0;
+    final t = ageMs / _dureeMs;
+    if (t < 0.18) return _opacite * (t / 0.18);
+    if (t < 0.62) return _opacite;
+    return _opacite * (1 - (t - 0.62) / 0.38);
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_actif) return const SizedBox.shrink();
+    final maintenant = _horloge.elapsedMilliseconds;
+
     return IgnorePointer(
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -173,17 +195,33 @@ class _PawTrailsState extends State<PawTrails> {
             final rad = p.angle * pi / 180;
             final dx = cos(rad), dy = sin(rad);
             final px = -dy, py = dx;
+            // Les empreintes d'une même piste se posent l'une après l'autre,
+            // mais restent visibles ensemble : c'est ce qui dessine la trace.
+            final decalage = _dureeMs / (p.n * 1.7);
+
             for (var i = 0; i < p.n; i++) {
+              final age = maintenant - p.naissanceMs - (i * decalage).round();
+              final o = _opaciteA(age);
+              if (o <= 0) continue; // rien à dessiner pour celle-ci
+
               final cote = i % 2 == 0 ? 1 : -1;
               final left = (p.x0 + dx * p.ecart * i + px * p.lateral * cote) / 100 * w;
               final top = (p.y0 + dy * p.ecart * i + py * p.lateral * cote) / 100 * h;
+
               empreintes.add(Positioned(
                 left: left,
                 top: top,
-                child: _Empreinte(
-                  svg: _especes[p.especeIdx],
-                  rotation: (p.angle + 90 + cote * 7) * pi / 180,
-                  delai: Duration(milliseconds: (i * (_dureeSec * 1000 / (p.n * 1.7))).round()),
+                child: Opacity(
+                  opacity: o,
+                  child: Transform.rotate(
+                    angle: (p.angle + 90 + cote * 7) * pi / 180,
+                    child: SvgPicture.string(
+                      _especes[p.especeIdx],
+                      width: _taille,
+                      height: _taille,
+                      colorFilter: const ColorFilter.mode(TytoColors.lune, BlendMode.srcIn),
+                    ),
+                  ),
                 ),
               ));
             }
@@ -191,60 +229,6 @@ class _PawTrailsState extends State<PawTrails> {
 
           return Stack(children: empreintes);
         },
-      ),
-    );
-  }
-}
-
-/// Une empreinte : elle apparaît, reste un moment, puis s'efface —
-/// exactement le rythme de l'animation "pasEmpreinte" du site.
-class _Empreinte extends StatefulWidget {
-  final String svg;
-  final double rotation;
-  final Duration delai;
-  const _Empreinte({required this.svg, required this.rotation, required this.delai});
-
-  @override
-  State<_Empreinte> createState() => _EmpreinteState();
-}
-
-class _EmpreinteState extends State<_Empreinte> with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-  late final Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(vsync: this, duration: const Duration(seconds: _dureeSec));
-    // 0% invisible → 18% visible → 62% visible → 100% invisible
-    _opacity = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: _opacite), weight: 18),
-      TweenSequenceItem(tween: ConstantTween(_opacite), weight: 44),
-      TweenSequenceItem(tween: Tween(begin: _opacite, end: 0.0), weight: 38),
-    ]).animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut));
-    Future.delayed(widget.delai, () {
-      if (mounted) _c.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: Transform.rotate(
-        angle: widget.rotation,
-        child: SvgPicture.string(
-          widget.svg,
-          width: _taille,
-          height: _taille,
-          colorFilter: const ColorFilter.mode(TytoColors.lune, BlendMode.srcIn),
-        ),
       ),
     );
   }

@@ -76,8 +76,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     super.initState();
     _pulse = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 2600), // même durée que sosPulse
+    )..repeat();
     _factIdx = DateTime.now().millisecond % _funFacts.length;
     _scheduleSlot(0, _showDuration);
     _scheduleSlot(1, _showDuration + _stagger);
@@ -265,28 +265,54 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 tooltip: 'Nouvelle conversation',
                 onPressed: _resetConversation,
               ),
-            AnimatedBuilder(
-              animation: _pulse,
-              builder: (context, child) {
-                // On fait respirer la couleur du bouton plutôt que d'ajouter
-                // une ombre : une ombre débordait du cadre de l'en-tête et
-                // laissait voir un carré rouge autour du bouton.
-                return TextButton.icon(
+            // Le halo de l'urgence, repris de sosPulse dans globals.css :
+            // un anneau qui s'écarte de 0 à 6 px en s'estompant, sur 2,6 s.
+            // La couleur du bouton, elle, ne bouge pas.
+            Padding(
+              padding: const EdgeInsets.all(7),
+              child: AnimatedBuilder(
+                animation: _pulse,
+                builder: (context, child) {
+                  // Les étapes exactes de sosPulse :
+                  //  0 % et 100 % → anneau à 0 px, opacité 0,5
+                  //  50 %         → anneau à 6 px, opacité 0
+                  final t = _pulse.value;
+                  final double spread, opacity;
+                  if (t < 0.5) {
+                    final p = t * 2;
+                    spread = 6 * p;
+                    opacity = 0.5 * (1 - p);
+                  } else {
+                    final p = (t - 0.5) * 2;
+                    spread = 6 * (1 - p);
+                    opacity = 0.5 * p;
+                  }
+                  return Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(999),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFFC9553F).withOpacity(opacity),
+                          blurRadius: 0,
+                          spreadRadius: spread,
+                        ),
+                      ],
+                    ),
+                    child: child,
+                  );
+                },
+                child: TextButton.icon(
                   onPressed: _openSos,
                   icon: const Icon(Icons.warning_rounded, size: 14, color: Colors.white),
                   label: Text('URGENCE',
                       style: TytoText.ui(size: 11, weight: FontWeight.w700, color: Colors.white)),
                   style: TextButton.styleFrom(
-                    backgroundColor: Color.lerp(
-                      TytoColors.urgence,
-                      const Color(0xFFE07A63),
-                      _pulse.value,
-                    ),
+                    backgroundColor: TytoColors.urgence,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                   ),
-                );
-              },
+                ),
+              ),
             ),
           ],
         ),

@@ -89,11 +89,15 @@ class _AuthGateState extends State<_AuthGate> {
   }
 
   Future<void> _ensureSession() async {
+    // On laisse l'écran d'accueil visible au moins le temps de le lire,
+    // même quand la session est déjà prête instantanément.
+    final minimum = Future.delayed(const Duration(milliseconds: 2200));
     if (AuthService.currentSession == null) {
       try {
         await Supabase.instance.client.auth.signInAnonymously();
       } catch (_) {}
     }
+    await minimum;
     if (mounted) setState(() => _ready = true);
   }
 
