@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/colors.dart';
+import 'theme/background.dart';
 import 'theme/typography.dart';
 import 'screens/chat_screen.dart';
 import 'services/auth_service.dart';
@@ -24,16 +25,19 @@ class TytoApp extends StatelessWidget {
     return MaterialApp(
       title: 'Tyto',
       debugShowCheckedModeBanner: false,
+      // Le dégradé du site est posé une fois pour toutes derrière chaque
+      // écran, plutôt que répété dans chacun d'eux.
+      builder: (context, child) => TytoBackground(child: child ?? const SizedBox.shrink()),
       theme: ThemeData(
         useMaterial3: true,
-        scaffoldBackgroundColor: TytoColors.nuit,
+        scaffoldBackgroundColor: Colors.transparent,
         colorScheme: ColorScheme.dark(
           primary: TytoColors.fauve,
           secondary: TytoColors.fauve,
           surface: TytoColors.nuit2,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: TytoColors.nuit,
+          backgroundColor: Colors.transparent,
           surfaceTintColor: Colors.transparent, // sans ça, Flutter grise légèrement le fond
           elevation: 0,
           iconTheme: IconThemeData(color: TytoColors.fauve), // le bouton menu, la flèche retour...
@@ -109,7 +113,7 @@ class _AuthGateState extends State<_AuthGate> {
       // Volontairement vide : l'écran de lancement d'Android (logo + phrase)
       // est encore affiché à cet instant. Y remettre un logo ferait croire
       // à un second démarrage.
-      return const Scaffold(backgroundColor: TytoColors.nuit, body: SizedBox.shrink());
+      return const Scaffold(backgroundColor: Colors.transparent, body: SizedBox.shrink());
     }
     return const ChatScreen();
   }

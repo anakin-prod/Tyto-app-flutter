@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../theme/background.dart';
 import '../theme/typography.dart';
 import '../widgets/tyto_tile.dart';
 import '../models/pet.dart';
@@ -7,6 +8,11 @@ import '../models/health_event.dart';
 import '../services/data_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/account_gate.dart';
+import '../widgets/pro_upsell.dart';
+import '../widgets/voice_button.dart';
+import '../services/user_service.dart';
+import '../services/pro_service.dart';
+import 'prescription_screen.dart';
 
 const _eventTypes = ['vaccin', 'poids', 'vermifuge', 'visite', 'traitement'];
 
@@ -58,6 +64,9 @@ class _CarnetScreenState extends State<CarnetScreen> {
   List<Pet> _pets = [];
   Pet? _selected;
   bool _loading = true;
+  bool _isPro = false;
+  bool _synthLoading = false;
+  VetReport? _synthese;
 
   @override
   void initState() {
@@ -75,6 +84,11 @@ class _CarnetScreenState extends State<CarnetScreen> {
     try {
       // On charge la liste des compagnons pour pouvoir passer de l'un à
       // l'autre depuis le carnet, comme sur le site.
+      final token = AuthService.currentSession?.accessToken;
+      if (token != null) {
+        final profil = await UserService.fetchMe(token);
+        if (mounted) _isPro = profil.pro;
+      }
       final pets = await DataService.loadPets();
       final choisi = _selected ?? (pets.isNotEmpty ? pets.first : null);
       final events = choisi == null ? <HealthEvent>[] : await DataService.loadEvents(choisi.id);
@@ -153,16 +167,165 @@ class _CarnetScreenState extends State<CarnetScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _EventForm(petId: _selected!.id),
+      builder: (_) => _EventForm(petId: _selected!.id, isPro: _isPro),
     );
     if (saved == true) _load();
+  }
+
+  /// Fonction Pro : photographier une ordonnance pour en extraire les
+  /// traitements. Sans abonnement Pro, on explique ce que c'est.
+  Future<void> _ouvrirOrdonnance() async {
+    if (!_isPro) return ProUpsell.afficher(context);
+    if (_selected == null) return;
+    final ajoute = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => PrescriptionScreen(pet: _selected!)),
+    );
+    if (ajoute == true) _load();
+  }
+
+  /// Fonction Pro : la synthèse rédigée par Tyto pour le vétérinaire.
+  Future<void> _genererSynthese() async {
+    if (!_isPro) return ProUpsell.afficher(context);
+    if (_selected == null || _synthLoading) return;
+    final token = AuthService.currentSession?.accessToken;
+    if (token == null) return;
+
+    setState(() {
+      _synthLoading = true;
+      _synthese = null;
+    });
+    final r = await ProService.vetReport(accessToken: token, petId: _selected!.id);
+    if (!mounted) return;
+    setState(() {
+      _synthLoading = false;
+      _synthese = r;
+    });
+    if (r == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("La synthèse n'a pas pu être générée. Réessaie dans un instant.")),
+      );
+    }
+  }
+
+  /// La rangée de boutons Pro, sous le sélecteur de compagnon.
+  Widget _actionsPro() {
+    Widget bouton({
+      required IconData icone,
+      required String texte,
+      required VoidCallback onTap,
+      bool charge = false,
+    }) {
+      return Expanded(
+        child: OutlinedButton(
+          onPressed: charge ? null : onTap,
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(
+                color: _isPro ? TytoColors.vert.withOpacity(0.55) : TytoColors.lune.withOpacity(0.18)),
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (charge)
+                const SizedBox(
+                    height: 13, width: 13,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.vert))
+              else
+                Icon(icone, size: 15, color: _isPro ? TytoColors.vert : TytoColors.brume),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  texte,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TytoText.ui(size: 12.5, color: _isPro ? TytoColors.vert : TytoColors.brume),
+                ),
+              ),
+              // Le cadenas rappelle que la fonction demande le plan Pro.
+              if (!_isPro) ...[
+                const SizedBox(width: 4),
+                const Icon(Icons.lock_outline_rounded, size: 12, color: TytoColors.brume),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: Row(
+        children: [
+          bouton(
+            icone: Icons.photo_camera_outlined,
+            texte: 'Ordonnance',
+            onTap: _ouvrirOrdonnance,
+          ),
+          const SizedBox(width: 8),
+          bouton(
+            icone: Icons.medical_services_outlined,
+            texte: 'Synthèse',
+            onTap: _genererSynthese,
+            charge: _synthLoading,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// La synthèse affichée sur le papier ivoire, comme sur le site.
+  Widget _carteSynthese() {
+    final morceaux = _synthese!.content.split('**');
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: TytoColors.papier,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: TytoColors.encre.withOpacity(0.15)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.medical_services_outlined, size: 17, color: TytoColors.encre),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text('Synthèse pour le vétérinaire',
+                    style: TytoText.display(size: 17, color: TytoColors.encre)),
+              ),
+              GestureDetector(
+                onTap: () => setState(() => _synthese = null),
+                child: Icon(Icons.close_rounded, size: 18, color: TytoColors.encre.withOpacity(0.55)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          RichText(
+            text: TextSpan(
+              style: TytoText.body(size: 15, color: TytoColors.encre).copyWith(height: 1.65),
+              children: [
+                for (var i = 0; i < morceaux.length; i++)
+                  TextSpan(
+                    text: morceaux[i],
+                    style: i.isOdd ? const TextStyle(fontWeight: FontWeight.w700) : null,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final title = _selected == null ? 'Carnet de santé' : 'Carnet · ${_selected!.name}';
     return Scaffold(
-      backgroundColor: TytoColors.nuit,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(title, style: TytoText.display(size: 18)),
         actions: [
@@ -187,6 +350,8 @@ class _CarnetScreenState extends State<CarnetScreen> {
                       children: [
                         const SizedBox(height: 8),
                         _petSelector(),
+                        _actionsPro(),
+                        if (_synthese != null) _carteSynthese(),
                         const SizedBox(height: 8),
                         Expanded(
                           child: _events.isEmpty
@@ -226,7 +391,10 @@ class _CarnetScreenState extends State<CarnetScreen> {
 
 class _EventForm extends StatefulWidget {
   final String petId;
-  const _EventForm({required this.petId});
+  /// La dictée vocale est une fonction Pro : le micro n'apparaît que
+  /// pour les comptes qui y ont droit, comme sur le site.
+  final bool isPro;
+  const _EventForm({required this.petId, this.isPro = false});
 
   @override
   State<_EventForm> createState() => _EventFormState();
@@ -372,7 +540,23 @@ class _EventFormState extends State<_EventForm> {
                 ),
                 const SizedBox(height: 14),
               ],
-              Text('Notes (facultatif)', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+              Row(
+                children: [
+                  Text('Notes (facultatif)', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+                  const Spacer(),
+                  if (widget.isPro)
+                    VoiceButton(
+                      size: 34,
+                      title: 'Dicter la note',
+                      onText: (t) {
+                        _notes.text = t;
+                        _notes.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _notes.text.length),
+                        );
+                      },
+                    ),
+                ],
+              ),
               const SizedBox(height: 6),
               TextField(
                 controller: _notes,

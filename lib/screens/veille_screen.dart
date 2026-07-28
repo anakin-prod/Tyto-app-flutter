@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../theme/background.dart';
 import '../theme/typography.dart';
 import '../models/pet.dart';
 import '../models/health_event.dart';
@@ -115,7 +116,7 @@ class _VeilleScreenState extends State<VeilleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TytoColors.nuit,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: Text('Veille sanitaire', style: TytoText.display(size: 19))),
       body: !AuthService.isSignedIn
           ? const AccountGate()

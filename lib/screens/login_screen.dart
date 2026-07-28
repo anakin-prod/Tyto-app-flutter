@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/colors.dart';
+import '../theme/background.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../widgets/tyto_icons.dart';
@@ -74,7 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TytoColors.nuit,
+      backgroundColor: Colors.transparent,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),

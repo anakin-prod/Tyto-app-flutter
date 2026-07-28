@@ -4,7 +4,9 @@ import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../services/billing_service.dart';
 import '../screens/login_screen.dart';
+import '../screens/team_screen.dart';
 import 'dotted_line_painter.dart';
+import 'star_field.dart';
 import 'tyto_icons.dart';
 import 'owl_sketch.dart';
 
@@ -73,7 +75,7 @@ class TytoDrawer extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            Positioned.fill(child: CustomPaint(painter: _StarsPainter())),
+            const Positioned.fill(child: StarField()),
             // le liseré doré du bord droit, comme sur le site
             Positioned(
               top: 0,
@@ -106,6 +108,20 @@ class TytoDrawer extends StatelessWidget {
                         children: [
                           _buildRubriques(),
                           const Divider(height: 24, color: Color(0x14EDE7D6)),
+                          // Réservé au plan Pro, comme sur le site.
+                          if (isPro)
+                            _buildAction(
+                              icon: Icons.group_outlined,
+                              label: 'Mon équipe',
+                              sub: 'Inviter des soigneurs',
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => const TeamScreen()),
+                                );
+                              },
+                            ),
                           if (subscribed)
                             _buildAction(
                               icon: Icons.settings_rounded,
@@ -334,23 +350,4 @@ class TytoDrawer extends StatelessWidget {
       ),
     );
   }
-}
-
-class _StarsPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = TytoColors.lune.withOpacity(0.35);
-    final positions = const [
-      [0.08, 0.06], [0.22, 0.14], [0.15, 0.27], [0.04, 0.38], [0.27, 0.47],
-      [0.11, 0.58], [0.24, 0.68], [0.07, 0.77], [0.19, 0.85], [0.30, 0.92],
-      [0.88, 0.09], [0.93, 0.22], [0.85, 0.35], [0.95, 0.51], [0.89, 0.63],
-      [0.92, 0.74], [0.86, 0.84], [0.94, 0.94],
-    ];
-    for (final p in positions) {
-      canvas.drawCircle(Offset(p[0] * size.width, p[1] * size.height), 1.4, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

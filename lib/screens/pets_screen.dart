@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../theme/background.dart';
 import '../theme/typography.dart';
 import '../widgets/tyto_tile.dart';
 import '../models/pet.dart';
@@ -85,7 +86,7 @@ class _PetsScreenState extends State<PetsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TytoColors.nuit,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text('Mes animaux', style: TytoText.display(size: 19)),
         actions: [

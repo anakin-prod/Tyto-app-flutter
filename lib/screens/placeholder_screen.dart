@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../theme/background.dart';
 import '../theme/typography.dart';
 
 class PlaceholderScreen extends StatelessWidget {
@@ -9,9 +10,9 @@ class PlaceholderScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TytoColors.nuit,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: TytoColors.nuit,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(title, style: TytoText.display(size: 18)),
       ),

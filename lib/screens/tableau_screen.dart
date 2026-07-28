@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../theme/background.dart';
 import '../theme/typography.dart';
 import '../widgets/tyto_tile.dart';
 import '../models/health_event.dart';
@@ -70,7 +71,7 @@ class _TableauScreenState extends State<TableauScreen> {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     return Scaffold(
-      backgroundColor: TytoColors.nuit,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(title: Text('Tableau des rappels', style: TytoText.display(size: 19))),
       body: !AuthService.isSignedIn
           ? const AccountGate()

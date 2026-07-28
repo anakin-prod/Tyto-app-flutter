@@ -2,11 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/colors.dart';
+import '../theme/background.dart';
 import '../theme/typography.dart';
 import '../widgets/tyto_drawer.dart';
 import '../widgets/tyto_icons.dart';
 import '../widgets/owl_sketch.dart';
 import '../widgets/paw_trails.dart';
+import '../widgets/voice_button.dart';
 import 'emergency_sheet.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
@@ -55,6 +57,7 @@ const _funFacts = [
 class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
   StreamSubscription<AuthState>? _authSub;
+  bool _peutRedescendre = false;
   final List<_Message> _thread = [];
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
@@ -89,6 +92,17 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     // sans ça, le badge resterait figé sur l'ancien statut.
     _authSub = AuthService.onAuthStateChange.listen((_) {
       if (mounted) _loadProfile();
+    });
+    // Quand la conversation est longue et qu'on est remonté la lire, un
+    // bouton apparaît pour revenir en bas d'un geste.
+    _scrollController.addListener(() {
+      if (!_scrollController.hasClients) return;
+      final loinDuBas = _scrollController.position.maxScrollExtent -
+              _scrollController.position.pixels >
+          260;
+      if (loinDuBas != _peutRedescendre) {
+        setState(() => _peutRedescendre = loinDuBas);
+      }
     });
   }
 
@@ -240,15 +254,15 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: TytoColors.nuit,
+      backgroundColor: Colors.transparent,
       drawer: TytoDrawer(activeId: 'chat', onSelect: _onDrawerSelect, isPro: _isPro, isPremium: _isPremium),
       appBar: AppBar(
-        backgroundColor: TytoColors.nuit,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         titleSpacing: 4,
         title: Row(
           children: [
-            const OwlSketch(size: 22),
+            OwlSketch(size: 22, thinking: _sending),
             const SizedBox(width: 8),
             Text('Tyto', style: TytoText.display(size: 19)),
             if (_isPro || _isPremium) ...[
@@ -342,7 +356,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               ),
             ),
           Expanded(
-            child: _thread.isEmpty
+            child: Stack(
+              children: [
+            _thread.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
                     controller: _scrollController,
@@ -350,59 +366,140 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                     itemCount: _thread.length + (_sending ? 1 : 0),
                     itemBuilder: (context, i) {
                       if (i == _thread.length) {
+                        // "Tyto observe…" — la carte ivoire avec la chouette
+                        // qui cligne vite, exactement comme sur le site.
                         return Align(
                           alignment: Alignment.centerLeft,
                           child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            decoration: BoxDecoration(color: TytoColors.nuit2, borderRadius: BorderRadius.circular(14)),
-                            child: const SizedBox(
-                              width: 18, height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.fauve),
+                            margin: const EdgeInsets.symmetric(vertical: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: TytoColors.papier,
+                              border: Border.all(color: TytoColors.encre.withOpacity(0.15)),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(12),
+                                topRight: Radius.circular(12),
+                                bottomRight: Radius.circular(12),
+                                bottomLeft: Radius.circular(4),
+                              ),
+                              boxShadow: const [
+                                BoxShadow(color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3)),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const OwlSketch(size: 15, ink: TytoColors.encre, detail: false, thinking: true),
+                                const SizedBox(width: 9),
+                                Text(
+                                  'Tyto observe',
+                                  style: TytoText.body(size: 15, color: TytoColors.encre)
+                                      .copyWith(fontStyle: FontStyle.italic),
+                                ),
+                                _PointsAnimes(controller: _pulse),
+                              ],
                             ),
                           ),
                         );
                       }
                       final m = _thread[i];
                       final isUser = m.role == 'user';
-                      return Align(
-                        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.78),
-                          decoration: BoxDecoration(
-                            color: isUser ? TytoColors.fauve.withOpacity(0.18) : TytoColors.nuit2,
-                            borderRadius: BorderRadius.circular(14),
+
+                      if (isUser) {
+                        // La bulle de l'utilisateur : fond fauve translucide,
+                        // liseré doré, coin bas-droit rentré.
+                        return Align(
+                          alignment: Alignment.centerRight,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 7),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
+                            decoration: BoxDecoration(
+                              color: TytoColors.fauve.withOpacity(0.14),
+                              border: Border.all(color: TytoColors.fauve.withOpacity(0.4)),
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(14),
+                                topRight: Radius.circular(14),
+                                bottomRight: Radius.circular(4),
+                                bottomLeft: Radius.circular(14),
+                              ),
+                            ),
+                            child: Text(
+                              m.content,
+                              style: TytoText.ui(size: 15, color: TytoColors.lune).copyWith(height: 1.45),
+                            ),
                           ),
-                          child: Text(m.content, style: TytoText.body(size: 15)),
+                        );
+                      }
+
+                      // La réponse de Tyto : la carte ivoire, avec son
+                      // en-tête "TYTO" et la chouette.
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 7),
+                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.94),
+                          decoration: BoxDecoration(
+                            color: TytoColors.papier,
+                            border: Border.all(color: TytoColors.encre.withOpacity(0.15)),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(12),
+                              topRight: Radius.circular(12),
+                              bottomRight: Radius.circular(12),
+                              bottomLeft: Radius.circular(4),
+                            ),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3)),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const OwlSketch(size: 13, ink: TytoColors.encre, detail: false),
+                                  const SizedBox(width: 7),
+                                  Text(
+                                    'TYTO',
+                                    style: TytoText.ui(size: 10, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6))
+                                        .copyWith(letterSpacing: 2.2),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 7),
+                              _TexteRiche(texte: m.content),
+                            ],
+                          ),
                         ),
                       );
                     },
                   ),
-          ),
-          GestureDetector(
-            onTap: _nextFact,
-            child: Container(
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-              decoration: BoxDecoration(
-                color: TytoColors.nuit2,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: TytoColors.lune.withOpacity(0.12)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.lightbulb_outline_rounded, size: 16, color: TytoColors.fauve),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    child: Text(
-                      'Le savais-tu ? ${_funFacts[_factIdx]}',
-                      style: TytoText.ui(size: 12.5, color: TytoColors.brume),
+                // Revenir au dernier message d'un geste, quand on est
+                // remonté lire le début d'une longue conversation.
+                if (_peutRedescendre)
+                  Positioned(
+                    right: 14,
+                    bottom: 14,
+                    child: GestureDetector(
+                      onTap: _scrollToBottom,
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: TytoColors.nuit2,
+                          border: Border.all(color: TytoColors.fauve.withOpacity(0.55)),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0x59000000), blurRadius: 12, offset: Offset(0, 3)),
+                          ],
+                        ),
+                        child: const Icon(Icons.arrow_downward_rounded,
+                            size: 20, color: TytoColors.fauve),
+                      ),
                     ),
                   ),
-                ],
-              ),
+              ],
             ),
           ),
           SafeArea(
@@ -429,7 +526,20 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       onSubmitted: (_) => _sendMessage(),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+                  // Dicter sa question plutôt que la taper (fonction Pro).
+                  if (_isPro)
+                    VoiceButton(
+                      size: 40,
+                      title: 'Dicter ma question',
+                      onText: (t) {
+                        _controller.text = t;
+                        _controller.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _controller.text.length),
+                        );
+                      },
+                    ),
+                  if (_isPro) const SizedBox(width: 6),
                   IconButton(
                     onPressed: _sending ? null : () => _sendMessage(),
                     icon: _sending
@@ -505,6 +615,71 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             }),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Les trois points de « Tyto observe… » : chacun s'allume à son tour,
+/// avec le rythme exact de l'animation "dot" du site (cycle 1,3 s,
+/// opacité 0,2 → 1, décalage de 0,2 s entre chaque point).
+class _PointsAnimes extends StatelessWidget {
+  final AnimationController controller;
+  const _PointsAnimes({required this.controller});
+
+  double _opacite(double t) {
+    // 0 %, 60 % et 100 % -> 0,2   |   30 % -> 1
+    if (t < 0.3) return 0.2 + 0.8 * (t / 0.3);
+    if (t < 0.6) return 1 - 0.8 * ((t - 0.3) / 0.3);
+    return 0.2;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        // Le contrôleur tourne sur 2,6 s : on prend deux cycles de 1,3 s.
+        final base = (controller.value * 2) % 1.0;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (i) {
+            final decalage = i * (0.2 / 1.3); // 0,2 s de retard par point
+            final t = (base - decalage) % 1.0;
+            return Opacity(
+              opacity: _opacite(t < 0 ? t + 1 : t),
+              child: Text(
+                '.',
+                style: TytoText.body(size: 15, color: TytoColors.encre)
+                    .copyWith(fontStyle: FontStyle.italic),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+}
+
+/// Le texte de Tyto met certains passages en gras avec des **étoiles**.
+/// On les affiche en gras plutôt que de laisser les étoiles apparentes.
+class _TexteRiche extends StatelessWidget {
+  final String texte;
+  const _TexteRiche({required this.texte});
+
+  @override
+  Widget build(BuildContext context) {
+    final morceaux = texte.split('**');
+    return RichText(
+      text: TextSpan(
+        style: TytoText.body(size: 16.5, color: TytoColors.encre).copyWith(height: 1.55),
+        children: [
+          for (var i = 0; i < morceaux.length; i++)
+            TextSpan(
+              text: morceaux[i],
+              style: i.isOdd ? const TextStyle(fontWeight: FontWeight.w700) : null,
+            ),
+        ],
       ),
     );
   }
