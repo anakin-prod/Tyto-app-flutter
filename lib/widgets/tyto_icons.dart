@@ -63,6 +63,106 @@ class GoogleLogo extends StatelessWidget {
   }
 }
 
+
+// ---------- Les espèces ----------
+// Les mêmes tracés que SPECIES_ICONS du site : chaque animal a son dessin,
+// au lieu d'une patte générique pour tout le monde.
+
+const _dogPath = '''
+<path d="M8.5 8.5c-.38 1.05-1.08 2.03-2.34 2.5-1.93.72-3.58-.3-3.66-1-.11-.99 1.18-6.53 4-7 1.92-.32 3.65.85 3.65 2.24A7.5 7.5 0 0 1 14 5.28c0-1.39 1.84-2.6 3.77-2.28 2.82.47 4.11 6.01 4 7-.08.7-1.73 1.72-3.66 1-1.26-.47-1.96-1.45-2.34-2.5" />
+<path d="M4.42 11.25A13.15 13.15 0 0 0 4 14.56C4 18.73 7.58 21 12 21s8-2.27 8-6.44c0-1.13-.17-2.24-.49-3.31" />
+<path d="M8 14v.5" /><path d="M16 14v.5" />
+<path d="M11.25 16.25h1.5L12 17z" />''';
+
+const _catPath = '''
+<path d="M5.6 10.6c0-3.3 2.9-5.9 6.4-5.9s6.4 2.6 6.4 5.9v1.5c0 3.6-2.9 6.5-6.4 6.5s-6.4-2.9-6.4-6.5v-1.5Z" />
+<path d="M6 10.3 5.1 4.6l4.7 2.8" />
+<path d="M18 10.3l.9-5.7-4.7 2.8" />
+<circle cx="9.6" cy="11.8" r="0.85" fill="currentColor" stroke="none" />
+<circle cx="14.4" cy="11.8" r="0.85" fill="currentColor" stroke="none" />
+<path d="M12 14.2l-.85 1.05.85.85.85-.85z" />
+<path d="M8.9 15.4H5.7M15.1 15.4h3.2M9 17l-2.7 1.1M15 17l2.7 1.1" />''';
+
+const _rabbitPath = '''
+<ellipse cx="9.3" cy="6.8" rx="1.75" ry="4.3" transform="rotate(-11 9.3 6.8)" />
+<ellipse cx="14.7" cy="6.8" rx="1.75" ry="4.3" transform="rotate(11 14.7 6.8)" />
+<ellipse cx="12" cy="15.6" rx="5.6" ry="5.1" />
+<circle cx="9.9" cy="14.9" r="0.85" fill="currentColor" stroke="none" />
+<circle cx="14.1" cy="14.9" r="0.85" fill="currentColor" stroke="none" />
+<circle cx="12" cy="17.3" r="0.75" fill="currentColor" stroke="none" />
+<path d="M9.6 18.4H6.8M14.4 18.4h2.8" />''';
+
+const _birdPath = '''
+<path d="M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.3-2.3L2.2 20" />
+<circle cx="16.2" cy="7" r="0.85" fill="currentColor" stroke="none" />
+<path d="m20 7 2.2.5-2.2.6" />
+<path d="M10 18v3.2M14 17.8V21.2" />
+<path d="M7 18a6 6 0 0 0 3.9-10.6" />''';
+
+const _rodentPath = '''
+<circle cx="7.4" cy="7.8" r="2.8" /><circle cx="16.6" cy="7.8" r="2.8" />
+<circle cx="12" cy="14.2" r="5.9" />
+<circle cx="9.9" cy="13.2" r="0.85" fill="currentColor" stroke="none" />
+<circle cx="14.1" cy="13.2" r="0.85" fill="currentColor" stroke="none" />
+<circle cx="12" cy="15.7" r="0.8" fill="currentColor" stroke="none" />
+<path d="M9.6 16.9 6.9 17.9M14.4 16.9l2.7 1" />''';
+
+const _reptilePath = '''
+<path d="M4.5 20.5h5.5a4.2 4.2 0 0 0 0-8.4H8.8a3.8 3.8 0 0 1 0-7.6h1.4" />
+<ellipse cx="13.6" cy="4.5" rx="3.4" ry="2.6" />
+<circle cx="14.8" cy="3.9" r="0.7" fill="currentColor" stroke="none" />
+<path d="M17 4.5h2.6M19.6 4.5l1.7-1M19.6 4.5l1.7 1" />''';
+
+const _fishPath = '''
+<path d="M15.4 8c-1.1-.9-2.5-1.5-4-1.5-3.8 0-7.4 2.5-8.9 5.5 1.5 3 5.1 5.5 8.9 5.5 1.5 0 2.9-.6 4-1.5" />
+<path d="M15.4 8 21 5.4c.4 4.4.4 8.8 0 13.2L15.4 16c1.3-1.1 2-2.5 2-4s-.7-2.9-2-4Z" />
+<circle cx="7.2" cy="11" r="0.9" fill="currentColor" stroke="none" />''';
+
+const _horsePath = '''
+<path d="M3.6 13.8 8.6 7.6c.7-.9 1.6-1.6 2.6-2L10.6 2.4 13 5 14 2.7 15.2 5.9c1.7 1.5 2.8 3.5 3.2 5.8L19.4 21H12l-.4-5.8c-1.6.6-3.4.8-5 .6L4 15.2Z" />
+<circle cx="10.4" cy="8.9" r="0.85" fill="currentColor" stroke="none" />
+<circle cx="5.3" cy="13.5" r="0.65" fill="currentColor" stroke="none" />
+<path d="M14.9 7.9c1.3 1.7 2.1 3.8 2.3 6l.3 3.1" />''';
+
+const _pawPath = '''
+<ellipse cx="7.3" cy="9" rx="2" ry="2.6" transform="rotate(-16 7.3 9)" />
+<ellipse cx="16.7" cy="9" rx="2" ry="2.6" transform="rotate(16 16.7 9)" />
+<ellipse cx="10.4" cy="5.6" rx="1.8" ry="2.4" />
+<ellipse cx="13.6" cy="5.6" rx="1.8" ry="2.4" />
+<path d="M12 12.4c2.6 0 4.8 2 4.8 4.4 0 2-1.5 3.3-3.4 3.3-.6 0-1-.2-1.4-.2s-.8.2-1.4.2c-1.9 0-3.4-1.3-3.4-3.3 0-2.4 2.2-4.4 4.8-4.4Z" />''';
+
+/// L'icône qui correspond à l'espèce, comme SpeciesIcon sur le site.
+class SpeciesIcon extends StatelessWidget {
+  final String species;
+  final double size;
+  final Color? color;
+  const SpeciesIcon({super.key, required this.species, this.size = 18, this.color});
+
+  static String _pathFor(String s) {
+    switch (s) {
+      case 'chien': return _dogPath;
+      case 'chat': return _catPath;
+      case 'lapin': return _rabbitPath;
+      case 'oiseau': return _birdPath;
+      case 'rongeur': return _rodentPath;
+      case 'reptile': return _reptilePath;
+      case 'poisson': return _fishPath;
+      case 'cheval': return _horsePath;
+      default: return _pawPath;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SvgPicture.string(
+      _wrap(_pathFor(species), strokeWidth: 1.5),
+      width: size,
+      height: size,
+      colorFilter: ColorFilter.mode(color ?? TytoColors.lune, BlendMode.srcIn),
+    );
+  }
+}
+
 class TytoIcon extends StatelessWidget {
   final String _svg;
   final double size;

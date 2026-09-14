@@ -7,6 +7,7 @@ import '../models/pet.dart';
 import '../services/data_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/account_gate.dart';
+import '../widgets/tyto_icons.dart';
 
 const _speciesOptions = ['chien', 'chat', 'lapin', 'oiseau', 'rongeur', 'reptile', 'autre'];
 
@@ -103,9 +104,32 @@ class _PetsScreenState extends State<PetsScreen> {
           : _loading
           ? const Center(child: CircularProgressIndicator(color: TytoColors.fauve))
           : _pets.isEmpty
-              ? const TytoEmptyState(
-                  icon: Icons.pets_rounded,
-                  message: "Aucun compagnon pour l'instant.\nAjoute ton premier animal avec le bouton +.",
+              ? SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+                    decoration: BoxDecoration(
+                      color: TytoColors.papier,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: TytoColors.encre.withOpacity(0.12)),
+                    ),
+                    child: Column(
+                      children: [
+                        SpeciesIcon(species: 'autre', size: 32, color: TytoColors.nuit),
+                        const SizedBox(height: 8),
+                        Text('Présente-moi ton compagnon',
+                            textAlign: TextAlign.center,
+                            style: TytoText.display(size: 19, color: TytoColors.encre)),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Une fois son profil créé, chaque réponse de Tyto sera personnalisée '
+                          'pour lui : son espèce, son âge, son poids, ses allergies.',
+                          textAlign: TextAlign.center,
+                          style: TytoText.body(size: 15, color: TytoColors.encre).copyWith(height: 1.55),
+                        ),
+                      ],
+                    ),
+                  ),
                 )
               : RefreshIndicator(
                   color: TytoColors.fauve,
@@ -122,14 +146,46 @@ class _PetsScreenState extends State<PetsScreen> {
                         if (p.breed != null) p.breed!,
                         if (ageTxt != null) ageTxt,
                       ];
+                      // La carte sur papier ivoire, comme sur le site,
+                      // avec l'icône propre à l'espèce de l'animal.
                       return GestureDetector(
                         onLongPress: () => _confirmDelete(p),
-                        child: TytoTile(
-                          icon: Icons.pets_rounded,
-                          title: p.name,
-                          subtitle: parts.join(' · '),
-                          trailing: p.weightKg != null ? '${p.weightKg} kg' : null,
-                          onTap: () => _openForm(pet: p),
+                        onTap: () => _openForm(pet: p),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+                          decoration: BoxDecoration(
+                            color: TytoColors.papier,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: TytoColors.encre.withOpacity(0.12)),
+                          ),
+                          child: Row(
+                            children: [
+                              SpeciesIcon(species: p.species, size: 28, color: TytoColors.nuit),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(p.name,
+                                        style: TytoText.display(size: 17, color: TytoColors.encre)),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      parts.isEmpty ? p.species : parts.join(' · '),
+                                      style: TytoText.ui(size: 12.5, color: TytoColors.encre.withOpacity(0.6))
+                                          .copyWith(height: 1.5),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (p.weightKg != null)
+                                Text('${p.weightKg} kg',
+                                    style: TytoText.ui(
+                                        size: 12.5,
+                                        weight: FontWeight.w600,
+                                        color: TytoColors.encre.withOpacity(0.6))),
+                            ],
+                          ),
                         ),
                       );
                     },

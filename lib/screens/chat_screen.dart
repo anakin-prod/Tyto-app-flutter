@@ -9,6 +9,10 @@ import '../widgets/tyto_icons.dart';
 import '../widgets/owl_sketch.dart';
 import '../widgets/paw_trails.dart';
 import '../widgets/voice_button.dart';
+import '../models/pet.dart';
+import '../models/health_event.dart';
+import '../services/data_service.dart';
+import '../data/facts.dart';
 import 'emergency_sheet.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
@@ -41,23 +45,15 @@ const _suggestionPool = [
   "Quels aliments sont toxiques pour un chat ?",
 ];
 
-// Le petit encart "Le savais-tu ?" au-dessus du champ de saisie, comme sur
-// le site — un fait amusant ou utile, qui change quand on tape dessus.
-const _funFacts = [
-  "Un chat ronronne aussi bien en inspirant qu'en expirant.",
-  "Les chiens peuvent sentir une odeur environ 40 fois mieux qu'un humain.",
-  "Les perruches peuvent apprendre plus de 100 mots.",
-  "Un lapin a besoin de ronger en permanence : ses dents poussent toute sa vie.",
-  "Les chats passent près de 70 % de leur vie à dormir.",
-  "Une tortue peut retenir sa respiration plus d'une heure sous l'eau.",
-  "Le cœur d'un chien bat entre 60 et 140 fois par minute selon sa taille.",
-  "Les chats ont un troisième œil : la membrane nictitante, qui protège leur regard.",
-];
 
 class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
   late final AnimationController _pulse;
   StreamSubscription<AuthState>? _authSub;
   bool _peutRedescendre = false;
+  List<Pet> _pets = [];
+  List<HealthEvent> _rappels = [];
+  final Map<String, List<_Message>> _conversations = {};
+  String? _activePetId; // null = conversation générale
   final List<_Message> _thread = [];
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
@@ -66,7 +62,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   int? _remaining;
   bool _isPremium = false;
   bool _isPro = false;
-  int _factIdx = 0;
+  String _fait = '';
 
   final List<int> _chipIdx = [0, 1, 2];
   final List<bool> _chipVisible = [true, true, true];
@@ -83,11 +79,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       vsync: this,
       duration: const Duration(milliseconds: 2600), // même durée que sosPulse
     )..repeat();
-    _factIdx = DateTime.now().millisecond % _funFacts.length;
+    _fait = pickFact(null, null);
     _scheduleSlot(0, _showDuration);
     _scheduleSlot(1, _showDuration + _stagger);
     _scheduleSlot(2, _showDuration + _stagger * 2);
     _loadProfile();
+    _chargerAnimaux();
     // Quand l'utilisateur se connecte (ou se déconnecte), son plan change :
     // sans ça, le badge resterait figé sur l'ancien statut.
     _authSub = AuthService.onAuthStateChange.listen((_) {
@@ -106,8 +103,18 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     });
   }
 
+  /// Pioche un autre fait — de l'espèce de l'animal ouvert si on en a
+  /// choisi un, sinon dans tous les animaux mélangés (comme le site).
   void _nextFact() {
-    setState(() => _factIdx = (_factIdx + 1) % _funFacts.length);
+    setState(() => _fait = pickFact(_especeActive, _fait));
+  }
+
+  String? get _especeActive {
+    if (_activePetId == null) return null;
+    for (final p in _pets) {
+      if (p.id == _activePetId) return p.species;
+    }
+    return null;
   }
 
   Future<void> _loadProfile() async {
@@ -120,6 +127,25 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       _isPro = profile.pro;
       _remaining = profile.remaining;
     });
+  }
+
+  /// Les compagnons et les rappels à venir, affichés au-dessus du chat
+  /// comme sur le site.
+  Future<void> _chargerAnimaux() async {
+    if (!AuthService.isSignedIn) return;
+    try {
+      final pets = await DataService.loadPets();
+      final rappels = await DataService.loadUpcoming();
+      if (!mounted) return;
+      setState(() {
+        _pets = pets;
+        _rappels = rappels;
+        _activePetId ??= pets.isNotEmpty ? pets.first.id : null;
+      });
+    } catch (_) {
+      // Pas de rappels affichés si le chargement échoue : ce n'est pas
+      // bloquant, le chat reste utilisable.
+    }
   }
 
   void _scheduleSlot(int slot, Duration delay) {
@@ -174,8 +200,15 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     _controller.clear();
     _scrollToBottom();
 
-    final messages = _thread.map((m) => {'role': m.role, 'content': m.content}).toList();
-    final result = await ChatService.send(accessToken: token, messages: messages);
+    // On n'envoie que les 12 derniers messages, comme le site : au-delà,
+    // ça coûte cher sans améliorer la réponse.
+    final recents = _thread.length > 12 ? _thread.sublist(_thread.length - 12) : _thread;
+    final messages = recents.map((m) => {'role': m.role, 'content': m.content}).toList();
+    final result = await ChatService.send(
+      accessToken: token,
+      messages: messages,
+      petId: _activePetId,
+    );
 
     if (!mounted) return;
     setState(() {
@@ -248,8 +281,157 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       default:
         screen = const PlaceholderScreen(title: 'Section');
     }
-    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen))
+        .then((_) => _chargerAnimaux());
   }
+
+  /// Les deux rappels les plus proches, en haut du chat. En doré vif
+  /// quand c'est dans 3 jours ou moins — comme sur le site.
+  Widget _rappelsImminents() {
+    if (_rappels.isEmpty || _thread.isNotEmpty) return const SizedBox.shrink();
+    final now = DateTime.now();
+    final deux = _rappels.take(2).toList();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Column(
+        children: deux.map((ev) {
+          final j = ev.nextDue!.difference(now).inDays;
+          final proche = j <= 3;
+          final nom = _pets.where((p) => p.id == ev.petId).map((p) => p.name).join();
+          final quand = j <= 0
+              ? "aujourd'hui !"
+              : j == 1
+                  ? 'demain'
+                  : 'dans $j jours';
+          return Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+            decoration: BoxDecoration(
+              color: proche ? TytoColors.fauve.withOpacity(0.15) : TytoColors.lune.withOpacity(0.05),
+              border: Border.all(
+                  color: proche ? TytoColors.fauve.withOpacity(0.53) : TytoColors.lune.withOpacity(0.15)),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: RichText(
+              text: TextSpan(
+                style: TytoText.ui(size: 13, color: TytoColors.lune).copyWith(height: 1.4),
+                children: [
+                  TextSpan(
+                    text: _libelleRappel(ev.type),
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  TextSpan(text: ' pour ${nom.isEmpty ? "ton compagnon" : nom} — $quand'),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _libelleRappel(String type) {
+    switch (type) {
+      case 'vaccin':
+        return 'Rappel de vaccin';
+      case 'vermifuge':
+        return 'Vermifuge';
+      case 'visite':
+        return 'Visite vétérinaire';
+      case 'traitement':
+        return 'Traitement';
+      default:
+        return 'Rappel';
+    }
+  }
+
+  /// Les pastilles pour choisir de quel animal on parle, plus « Général ».
+  /// Chaque animal a sa propre conversation, comme sur le site.
+  Widget _selecteurAnimal() {
+    if (_pets.isEmpty) return const SizedBox.shrink();
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
+        children: [
+          ..._pets.map((p) {
+            final on = _activePetId == p.id;
+            return Padding(
+              padding: const EdgeInsets.only(right: 7),
+              child: GestureDetector(
+                onTap: () => _changerAnimal(p.id),
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  decoration: BoxDecoration(
+                    color: on ? TytoColors.fauve.withOpacity(0.15) : TytoColors.lune.withOpacity(0.05),
+                    border: Border.all(color: on ? TytoColors.fauve : TytoColors.lune.withOpacity(0.18)),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SpeciesIcon(species: p.species, size: 14, color: TytoColors.lune),
+                      const SizedBox(width: 6),
+                      Text(p.name,
+                          style: TytoText.ui(
+                              size: 13,
+                              weight: on ? FontWeight.w700 : FontWeight.w400,
+                              color: TytoColors.lune)),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
+          GestureDetector(
+            onTap: () => _changerAnimal(null),
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              decoration: BoxDecoration(
+                color: _activePetId == null ? TytoColors.fauve.withOpacity(0.15) : Colors.transparent,
+                border: Border.all(
+                    color: _activePetId == null ? TytoColors.fauve : TytoColors.lune.withOpacity(0.18)),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.public_rounded,
+                      size: 13,
+                      color: _activePetId == null ? TytoColors.lune : TytoColors.brume),
+                  const SizedBox(width: 5),
+                  Text('Général',
+                      style: TytoText.ui(
+                          size: 13,
+                          color: _activePetId == null ? TytoColors.lune : TytoColors.brume)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Changer d'animal ouvre sa conversation : chacune est séparée,
+  /// exactement comme sur le site.
+  void _changerAnimal(String? petId) {
+    if (petId == _activePetId) return;
+    setState(() {
+      _conversations[_cleConversation] = List.of(_thread);
+      _activePetId = petId;
+      _thread
+        ..clear()
+        ..addAll(_conversations[_cleConversation] ?? []);
+      // Le fait affiché suit l'espèce de l'animal ouvert.
+      _fait = pickFact(_especeActive, _fait);
+    });
+  }
+
+  String get _cleConversation => _activePetId ?? 'general';
 
   @override
   Widget build(BuildContext context) {
@@ -344,14 +526,28 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           const Positioned.fill(child: PawTrails()),
           Column(
         children: [
+          _rappelsImminents(),
+          _selecteurAnimal(),
           if (_remaining != null && !_isPremium && !_isPro)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '$_remaining question${_remaining! > 1 ? 's' : ''} gratuite${_remaining! > 1 ? 's' : ''} restante${_remaining! > 1 ? 's' : ''} aujourd\'hui',
-                  style: TytoText.ui(size: 11.5, color: _remaining! <= 2 ? TytoColors.urgence : TytoColors.brume),
+                  // Même formulation que le site : un visiteur a des
+                  // questions « d'essai », et on lui dit ce qu'il gagne
+                  // en créant un compte.
+                  () {
+                    final n = _remaining!;
+                    final pluriel = n > 1 ? 's' : '';
+                    final visiteur = !AuthService.isSignedIn;
+                    final nature = visiteur ? "d'essai" : 'gratuite$pluriel';
+                    final suite = visiteur
+                        ? ' — crée ton compte gratuit pour passer à 15/jour'
+                        : '';
+                    return '$n question$pluriel $nature restante$pluriel aujourd\'hui$suite';
+                  }(),
+                  style: TytoText.ui(size: 12, color: _remaining! <= 2 ? TytoColors.fauve : TytoColors.brume),
                 ),
               ),
             ),
@@ -502,6 +698,51 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               ],
             ),
           ),
+          // « Le savais-tu ? » — même mise en forme que le site : titre
+          // en clair, fait en italique, et on peut toucher pour en
+          // piocher un autre.
+          if (_fait.isNotEmpty)
+            GestureDetector(
+              onTap: _nextFact,
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(12, 0, 12, 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: TytoColors.nuit2,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: TytoColors.lune.withOpacity(0.12)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Icon(Icons.lightbulb_outline_rounded, size: 14, color: TytoColors.fauve),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: RichText(
+                        text: TextSpan(
+                          style: TytoText.ui(size: 12.5, color: TytoColors.brume)
+                              .copyWith(fontStyle: FontStyle.italic, height: 1.45),
+                          children: [
+                            TextSpan(
+                              text: 'Le savais-tu ? ',
+                              style: TytoText.ui(
+                                      size: 12.5,
+                                      weight: FontWeight.w700,
+                                      color: TytoColors.lune)
+                                  .copyWith(fontStyle: FontStyle.normal),
+                            ),
+                            TextSpan(text: _fait),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           SafeArea(
             top: false,
             child: Padding(
@@ -568,14 +809,27 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const OwlSketch(size: 64),
+            const OwlSketch(size: 96),
             const SizedBox(height: 18),
             Text(
-              "Que veux-tu savoir sur les animaux\naujourd'hui ?",
+              _activePetId != null && _pets.any((p) => p.id == _activePetId)
+                  ? 'Que veux-tu savoir pour ${_pets.firstWhere((p) => p.id == _activePetId).name} ?'
+                  : "Que veux-tu savoir sur les animaux\naujourd'hui ?",
               textAlign: TextAlign.center,
-              style: TytoText.body(size: 16, color: TytoColors.brume),
+              style: TytoText.body(size: 17, color: TytoColors.brume)
+                  .copyWith(fontStyle: FontStyle.italic, height: 1.5),
             ),
-            const SizedBox(height: 22),
+            // La même phrase de réassurance que sur le site, pour
+            // quelqu'un qui n'a pas encore enregistré d'animal.
+            if (!AuthService.isSignedIn) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Gratuit, sans inscription. Touche une question pour commencer.',
+                textAlign: TextAlign.center,
+                style: TytoText.ui(size: 12.5, color: TytoColors.brume),
+              ),
+            ],
+            const SizedBox(height: 18),
             ...List.generate(_chipIdx.length, (slot) {
               final pIdx = _chipIdx[slot];
               return AnimatedOpacity(

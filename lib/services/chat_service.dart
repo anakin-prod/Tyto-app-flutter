@@ -13,6 +13,7 @@ class ChatService {
   static Future<ChatResult> send({
     required String accessToken,
     required List<Map<String, String>> messages,
+    String? petId,
   }) async {
     try {
       final res = await http.post(
@@ -21,7 +22,12 @@ class ChatService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $accessToken',
         },
-        body: jsonEncode({'messages': messages}),
+        body: jsonEncode({
+          'messages': messages,
+          // Tyto adapte sa réponse à l'animal concerné (son espèce, son
+          // âge, ses antécédents), comme sur le site.
+          if (petId != null) 'petId': petId,
+        }),
       );
 
       final data = jsonDecode(res.body) as Map<String, dynamic>;
