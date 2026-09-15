@@ -240,8 +240,35 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       );
       return;
     }
+
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: TytoColors.nuit2,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined, color: TytoColors.lune),
+              title: Text('Prendre une photo', style: TytoText.ui(color: TytoColors.lune)),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.image_outlined, color: TytoColors.lune),
+              title: Text('Choisir dans la galerie', style: TytoText.ui(color: TytoColors.lune)),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
     final picker = ImagePicker();
-    final img = await picker.pickImage(source: ImageSource.gallery, imageQuality: 100);
+    final img = await picker.pickImage(source: source, imageQuality: 100);
     if (img == null) return;
 
     setState(() => _compressionEnCours = true);
@@ -1044,12 +1071,16 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                   padding: const EdgeInsets.only(bottom: 9),
                   child: SizedBox(
                     width: double.infinity,
+                    // Une hauteur fixe : sans elle, une question plus longue
+                    // ou plus courte que la précédente change la taille de
+                    // la puce, et toute la pile semble "sauter".
+                    height: 52,
                     child: OutlinedButton(
                       onPressed: () => _sendMessage(_suggestionPool[pIdx]),
                       style: OutlinedButton.styleFrom(
                         backgroundColor: TytoColors.lune.withOpacity(0.05),
                         side: BorderSide(color: TytoColors.lune.withOpacity(0.22)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         alignment: Alignment.centerLeft,
                       ),
@@ -1062,6 +1093,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                               _suggestionPool[pIdx],
                               style: TytoText.ui(size: 14, color: TytoColors.lune),
                               textAlign: TextAlign.left,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],

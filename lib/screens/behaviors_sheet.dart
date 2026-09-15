@@ -111,7 +111,7 @@ class _AccordeonState extends State<_Accordeon> {
               children: [
                 Expanded(
                   child: Text(
-                    widget.item.question,
+                    widget.item.question.replaceAll(' (', '\n('),
                     style: TytoText.ui(size: 14, weight: FontWeight.w700, color: TytoColors.encre),
                   ),
                 ),
