@@ -104,7 +104,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     // Quand l'utilisateur se connecte (ou se déconnecte), son plan change :
     // sans ça, le badge resterait figé sur l'ancien statut.
     _authSub = AuthService.onAuthStateChange.listen((_) {
-      if (mounted) _loadProfile();
+      if (!mounted) return;
+      _loadProfile();
+      // Sans ça, se connecter ne rechargeait pas les animaux : ils ne
+      // réapparaissaient qu'en revenant d'un autre écran par hasard.
+      _chargerAnimaux();
     });
     // Quand la conversation est longue et qu'on est remonté la lire, un
     // bouton apparaît pour revenir en bas d'un geste.
