@@ -116,8 +116,9 @@ class _LostPetScreenState extends State<LostPetScreen> {
 
       entry.remove();
       if (!mounted) return;
-      await SharePlus.instance.share(
-        ShareParams(files: [XFile(file.path)], text: 'Affiche pour ${widget.pet.name}, disparu·e.'),
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Affiche pour ${widget.pet.name}, disparu·e.',
       );
     } catch (e) {
       entry.remove();

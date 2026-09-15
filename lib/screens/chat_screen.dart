@@ -104,7 +104,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     // Quand l'utilisateur se connecte (ou se déconnecte), son plan change :
     // sans ça, le badge resterait figé sur l'ancien statut.
     _authSub = AuthService.onAuthStateChange.listen((_) {
-      if (mounted) _loadProfile();
+      if (!mounted) return;
+      _loadProfile();
+      // Sans ça, se connecter ne rechargeait pas les animaux : ils ne
+      // réapparaissaient qu'en revenant d'un autre écran par hasard.
+      _chargerAnimaux();
     });
     // Quand la conversation est longue et qu'on est remonté la lire, un
     // bouton apparaît pour revenir en bas d'un geste.
@@ -559,11 +563,18 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       body: Stack(
         children: [
           const Positioned.fill(child: PawTrails()),
-          Column(
+          Builder(builder: (context) {
+            // Rappels, sélecteur d'animal et quota prennent une vraie
+            // place en hauteur ; avec le clavier ouvert, il n'en reste
+            // plus assez et ça débordait. On les masque pendant la
+            // saisie — ça libère aussi de la place pour lire la
+            // conversation en tapant.
+            final clavierOuvert = MediaQuery.of(context).viewInsets.bottom > 0;
+            return Column(
         children: [
-          _rappelsImminents(),
-          _selecteurAnimal(),
-          if (_remaining != null && !_isPremium && !_isPro)
+          if (!clavierOuvert) _rappelsImminents(),
+          if (!clavierOuvert) _selecteurAnimal(),
+          if (!clavierOuvert && _remaining != null && !_isPremium && !_isPro)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
               child: Align(
@@ -736,7 +747,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           // « Le savais-tu ? » — même mise en forme que le site : titre
           // en clair, fait en italique, et on peut toucher pour en
           // piocher un autre.
-          if (_fait.isNotEmpty)
+          if (!clavierOuvert && _fait.isNotEmpty)
             GestureDetector(
               onTap: _nextFact,
               child: Container(
@@ -831,7 +842,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             ),
           ),
         ],
-      ),
+      );
+          }),
         ],
       ),
     );
@@ -839,8 +851,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
