@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../theme/colors.dart';
 import '../theme/background.dart';
 import '../theme/typography.dart';
@@ -12,6 +13,7 @@ import '../widgets/pro_upsell.dart';
 import '../widgets/voice_button.dart';
 import '../services/user_service.dart';
 import '../services/pro_service.dart';
+import '../services/pdf_service.dart';
 import 'prescription_screen.dart';
 
 const _eventTypes = ['vaccin', 'poids', 'vermifuge', 'visite', 'traitement'];
@@ -66,6 +68,7 @@ class _CarnetScreenState extends State<CarnetScreen> {
   bool _loading = true;
   bool _isPro = false;
   bool _synthLoading = false;
+  bool _exportLoading = false;
   VetReport? _synthese;
 
   @override
@@ -174,6 +177,26 @@ class _CarnetScreenState extends State<CarnetScreen> {
 
   /// Fonction Pro : photographier une ordonnance pour en extraire les
   /// traitements. Sans abonnement Pro, on explique ce que c'est.
+  /// Le dossier PDF, disponible pour tout compte connecté (pas besoin
+  /// d'être Pro) — généré sur l'appareil, puis proposé au partage.
+  Future<void> _exporterPdf() async {
+    if (_selected == null || _exportLoading) return;
+    setState(() => _exportLoading = true);
+    try {
+      final fichier = await PdfService.genererDossier(pet: _selected!, evenements: _events);
+      if (!mounted) return;
+      await Share.shareXFiles([XFile(fichier.path)], text: 'Dossier de ${_selected!.name}, par Tyto.');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("L'export n'a pas abouti, réessaie.")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _exportLoading = false);
+    }
+  }
+
   Future<void> _ouvrirOrdonnance() async {
     if (!_isPro) return ProUpsell.afficher(context);
     if (_selected == null) return;
@@ -215,13 +238,17 @@ class _CarnetScreenState extends State<CarnetScreen> {
       required String texte,
       required VoidCallback onTap,
       bool charge = false,
+      bool proRequis = true,
     }) {
+      // Export n'est pas une fonction Pro : elle reste toujours dorée
+      // et sans cadenas, contrairement à Ordonnance et Synthèse.
+      final actif = !proRequis || _isPro;
+      final couleur = proRequis ? TytoColors.vert : TytoColors.fauve;
       return Expanded(
         child: OutlinedButton(
           onPressed: charge ? null : onTap,
           style: OutlinedButton.styleFrom(
-            side: BorderSide(
-                color: _isPro ? TytoColors.vert.withOpacity(0.55) : TytoColors.lune.withOpacity(0.18)),
+            side: BorderSide(color: actif ? couleur.withOpacity(0.55) : TytoColors.lune.withOpacity(0.18)),
             padding: const EdgeInsets.symmetric(vertical: 11),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -229,22 +256,23 @@ class _CarnetScreenState extends State<CarnetScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (charge)
-                const SizedBox(
+                SizedBox(
                     height: 13, width: 13,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.vert))
+                    child: CircularProgressIndicator(strokeWidth: 2, color: couleur))
               else
-                Icon(icone, size: 15, color: _isPro ? TytoColors.vert : TytoColors.brume),
+                Icon(icone, size: 15, color: actif ? couleur : TytoColors.brume),
               const SizedBox(width: 6),
               Flexible(
                 child: Text(
                   texte,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TytoText.ui(size: 12.5, color: _isPro ? TytoColors.vert : TytoColors.brume),
+                  style: TytoText.ui(size: 12.5, color: actif ? couleur : TytoColors.brume),
                 ),
               ),
-              // Le cadenas rappelle que la fonction demande le plan Pro.
-              if (!_isPro) ...[
+              // Le cadenas rappelle que la fonction demande le plan Pro —
+              // jamais affiché pour Export, qui n'en a pas besoin.
+              if (proRequis && !_isPro) ...[
                 const SizedBox(width: 4),
                 const Icon(Icons.lock_outline_rounded, size: 12, color: TytoColors.brume),
               ],
@@ -258,6 +286,14 @@ class _CarnetScreenState extends State<CarnetScreen> {
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
       child: Row(
         children: [
+          bouton(
+            icone: Icons.description_outlined,
+            texte: 'Export',
+            onTap: _exporterPdf,
+            proRequis: false,
+            charge: _exportLoading,
+          ),
+          const SizedBox(width: 8),
           bouton(
             icone: Icons.photo_camera_outlined,
             texte: 'Ordonnance',

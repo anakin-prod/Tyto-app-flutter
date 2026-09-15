@@ -6,6 +6,7 @@ import 'theme/background.dart';
 import 'theme/typography.dart';
 import 'screens/chat_screen.dart';
 import 'services/auth_service.dart';
+import 'services/notification_service.dart';
 
 // ⚠️ Ce ne sont PAS des clés secrètes, elles sont faites pour être publiques.
 const String supabaseUrl = 'https://wtmlzrtbsxlwyxpnimee.supabase.co';
@@ -14,6 +15,7 @@ const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  await NotificationService.initialiser();
   runApp(const TytoApp());
 }
 

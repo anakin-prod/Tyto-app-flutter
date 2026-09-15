@@ -5,6 +5,9 @@
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <!-- Dictée vocale des observations (fonction Pro) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Rappels de vaccins/vermifuges, obligatoire depuis Android 13 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <queries>
         <intent>

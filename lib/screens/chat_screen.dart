@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart';
+import '../services/photo_service.dart';
 import '../theme/colors.dart';
 import '../theme/background.dart';
 import '../theme/typography.dart';
@@ -17,6 +20,8 @@ import 'emergency_sheet.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
 import '../services/user_service.dart';
+import '../services/review_service.dart';
+import '../services/notification_service.dart';
 import 'placeholder_screen.dart';
 import 'pets_screen.dart';
 import 'carnet_screen.dart';
@@ -62,10 +67,14 @@ List<String> _suggestionPoolPour(String nom) => [
     ];
 
 
-class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
+class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _pulse;
   StreamSubscription<AuthState>? _authSub;
   bool _peutRedescendre = false;
+  bool _justPaid = false; // vient de passer en Premium/Pro, à l'instant
+  File? _photoJointe;
+  PhotoCompressee? _photoCompressee;
+  bool _compressionEnCours = false;
   List<Pet> _pets = [];
   List<HealthEvent> _rappels = [];
   final Map<String, List<_Message>> _conversations = {};
@@ -91,6 +100,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2600), // même durée que sosPulse
@@ -142,11 +152,23 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     if (token == null) return;
     final profile = await UserService.fetchMe(token);
     if (!mounted) return;
+    final etaitDejaAbonne = _isPremium || _isPro;
     setState(() {
       _isPremium = profile.premium;
       _isPro = profile.pro;
       _remaining = profile.remaining;
+      // On vient de passer en Premium/Pro à l'instant (retour du
+      // paiement Stripe dans le navigateur) : le même message que le
+      // site s'affiche.
+      if (!etaitDejaAbonne && (_isPremium || _isPro)) _justPaid = true;
     });
+  }
+
+  /// Après un paiement, l'utilisateur revient du navigateur : on
+  /// recharge son profil pour détecter le passage en Premium/Pro.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadProfile();
   }
 
   /// Les compagnons et les rappels à venir, affichés au-dessus du chat
@@ -162,6 +184,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         _rappels = rappels;
         _activePetId ??= pets.isNotEmpty ? pets.first.id : null;
       });
+      // On (re)programme les notifications à chaque chargement, pour
+      // qu'elles restent toujours à jour avec le vrai carnet.
+      await NotificationService.demanderPermission();
+      await NotificationService.reprogrammer(
+        rappels: rappels,
+        nomsAnimaux: {for (final p in pets) p.id: p.name},
+      );
     } catch (_) {
       // Pas de rappels affichés si le chargement échoue : ce n'est pas
       // bloquant, le chat reste utilisable.
@@ -191,6 +220,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authSub?.cancel();
     _pulse.dispose();
     for (final t in _chipTimers) {
@@ -201,9 +231,41 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
+  /// Joindre une photo est réservé au Premium/Pro — comme sur le site,
+  /// on l'explique plutôt que de bloquer sans un mot.
+  Future<void> _choisirPhoto() async {
+    if (!_isPremium && !_isPro) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("L'analyse de photo est réservée au plan Premium.")),
+      );
+      return;
+    }
+    final picker = ImagePicker();
+    final img = await picker.pickImage(source: ImageSource.gallery, imageQuality: 100);
+    if (img == null) return;
+
+    setState(() => _compressionEnCours = true);
+    final compressee = await compresserPhoto(File(img.path));
+    if (!mounted) return;
+    setState(() {
+      _compressionEnCours = false;
+      if (compressee != null) {
+        _photoJointe = File(img.path);
+        _photoCompressee = compressee;
+      }
+    });
+  }
+
+  void _retirerPhoto() {
+    setState(() {
+      _photoJointe = null;
+      _photoCompressee = null;
+    });
+  }
+
   Future<void> _sendMessage([String? preset]) async {
     final text = preset ?? _controller.text.trim();
-    if (text.isEmpty || _sending) return;
+    if ((text.isEmpty && _photoCompressee == null) || _sending) return;
 
     final token = AuthService.currentSession?.accessToken;
     if (token == null) {
@@ -213,9 +275,16 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       return;
     }
 
+    final photoEnvoyee = _photoCompressee;
     setState(() {
-      _thread.add(_Message(role: 'user', content: text));
+      _thread.add(_Message(
+        role: 'user',
+        content: text.isEmpty ? '(photo)' : text,
+        hasImage: photoEnvoyee != null,
+      ));
       _sending = true;
+      _photoJointe = null;
+      _photoCompressee = null;
     });
     _controller.clear();
     _scrollToBottom();
@@ -228,6 +297,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       accessToken: token,
       messages: messages,
       petId: _activePetId,
+      imageBase64: photoEnvoyee?.base64,
+      imageMediaType: photoEnvoyee?.mediaType,
     );
 
     if (!mounted) return;
@@ -239,6 +310,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         _thread.add(_Message(role: 'assistant', content: result.text ?? ''));
         if (result.remaining != null) _remaining = result.remaining;
         if (result.premium != null) _isPremium = result.premium!;
+        ReviewService.signalerReponseReussie();
       }
     });
     _scrollToBottom();
@@ -248,6 +320,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     switch (error) {
       case 'quota':
         return "Tu as atteint la limite de questions gratuites pour aujourd'hui. Passe en Premium pour continuer sans limite.";
+      case 'premium_photo':
+        return "L'analyse de photo est réservée au plan Premium. Passe en Premium pour que Tyto puisse regarder tes photos.";
       case 'auth':
         return "Ta session a expiré, reconnecte-toi.";
       case 'network':
@@ -572,6 +646,32 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             final clavierOuvert = MediaQuery.of(context).viewInsets.bottom > 0;
             return Column(
         children: [
+          if (_justPaid)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: TytoColors.fauve.withOpacity(0.12),
+                border: Border.all(color: TytoColors.fauve.withOpacity(0.47)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      _isPro
+                          ? "Bienvenue en Pro. L'équipe, les ordonnances et la veille sanitaire sont à toi."
+                          : "Bienvenue en Premium. Questions illimitées, réponses avancées et l'œil de Tyto sont à toi.",
+                      style: TytoText.ui(size: 13.5, color: TytoColors.lune).copyWith(height: 1.45),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _justPaid = false),
+                    child: Icon(Icons.close_rounded, size: 18, color: TytoColors.lune.withOpacity(0.6)),
+                  ),
+                ],
+              ),
+            ),
           if (!clavierOuvert) _rappelsImminents(),
           if (!clavierOuvert) _selecteurAnimal(),
           if (!clavierOuvert && _remaining != null && !_isPremium && !_isPro)
@@ -666,9 +766,27 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                                 bottomLeft: Radius.circular(14),
                               ),
                             ),
-                            child: Text(
-                              m.content,
-                              style: TytoText.ui(size: 15, color: TytoColors.lune).copyWith(height: 1.45),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (m.hasImage)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 5),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.photo_camera_outlined, size: 13, color: TytoColors.lune.withOpacity(0.75)),
+                                        const SizedBox(width: 5),
+                                        Text('Photo envoyée',
+                                            style: TytoText.ui(size: 12, color: TytoColors.lune.withOpacity(0.75))),
+                                      ],
+                                    ),
+                                  ),
+                                Text(
+                                  m.content,
+                                  style: TytoText.ui(size: 15, color: TytoColors.lune).copyWith(height: 1.45),
+                                ),
+                              ],
                             ),
                           ),
                         );
@@ -793,8 +911,45 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             top: false,
             child: Padding(
               padding: const EdgeInsets.all(12),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_photoJointe != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.file(_photoJointe!, height: 72, width: 72, fit: BoxFit.cover),
+                          ),
+                          Positioned(
+                            top: -6,
+                            right: -6,
+                            child: GestureDetector(
+                              onTap: _retirerPhoto,
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(color: TytoColors.nuit, shape: BoxShape.circle),
+                                child: const Icon(Icons.close_rounded, size: 14, color: TytoColors.lune),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Row(
+                children: [
+                  IconButton(
+                    onPressed: _compressionEnCours ? null : _choisirPhoto,
+                    icon: _compressionEnCours
+                        ? const SizedBox(
+                            height: 16, width: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.fauve))
+                        : Icon(Icons.image_outlined,
+                            color: (_isPremium || _isPro) ? TytoColors.lune : TytoColors.brume),
+                    tooltip: (_isPremium || _isPro) ? 'Joindre une photo' : 'Joindre une photo (Premium)',
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _controller,
@@ -837,6 +992,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       foregroundColor: TytoColors.nuit,
                     ),
                   ),
+                ],
+              ),
                 ],
               ),
             ),
@@ -989,5 +1146,6 @@ class _TexteRiche extends StatelessWidget {
 class _Message {
   final String role;
   final String content;
-  _Message({required this.role, required this.content});
+  final bool hasImage;
+  _Message({required this.role, required this.content, this.hasImage = false});
 }

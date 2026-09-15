@@ -14,6 +14,8 @@ class ChatService {
     required String accessToken,
     required List<Map<String, String>> messages,
     String? petId,
+    String? imageBase64,
+    String? imageMediaType,
   }) async {
     try {
       final res = await http.post(
@@ -27,6 +29,8 @@ class ChatService {
           // Tyto adapte sa réponse à l'animal concerné (son espèce, son
           // âge, ses antécédents), comme sur le site.
           if (petId != null) 'petId': petId,
+          if (imageBase64 != null)
+            'image': {'data': imageBase64, 'media_type': imageMediaType ?? 'image/jpeg'},
         }),
       );
 

@@ -19,6 +19,10 @@ dependencies:
   speech_to_text: ^7.0.0     # dictée vocale des observations (fonction Pro)
   share_plus: ^10.0.2        # partager l'affiche générée (remplace l'impression du site)
   path_provider: ^2.1.4      # emplacement temporaire pour l'affiche avant partage
+  in_app_review: ^2.0.9      # invite à noter l'app, au bon moment
+  pdf: ^3.11.1                # dossier PDF du carnet de santé, comme le site
+  flutter_local_notifications: ^18.0.1  # rappels de vaccins/vermifuges sur le téléphone
+  timezone: ^0.9.4            # les notifications programmées ont besoin du fuseau horaire
   shared_preferences: ^2.2.3 # mémorise la session utilisateur sur l'appareil
   cupertino_icons: ^1.0.8
 
