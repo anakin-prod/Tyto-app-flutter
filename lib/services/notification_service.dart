@@ -88,6 +88,7 @@ class NotificationService {
           quand,
           details,
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         );
       } catch (e) {
         // Une programmation ratée ne doit jamais bloquer les autres.
