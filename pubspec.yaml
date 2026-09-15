@@ -17,8 +17,6 @@ dependencies:
   image_picker: ^1.1.2       # photographier une ordonnance (fonction Pro)
   image: ^4.2.0              # compresser la photo avant l'envoi, comme le site
   speech_to_text: ^7.0.0     # dictée vocale des observations (fonction Pro)
-  share_plus: ^10.0.2        # partager l'affiche générée (remplace l'impression du site)
-  path_provider: ^2.1.4      # emplacement temporaire pour l'affiche avant partage
   shared_preferences: ^2.2.3 # mémorise la session utilisateur sur l'appareil
   cupertino_icons: ^1.0.8
 

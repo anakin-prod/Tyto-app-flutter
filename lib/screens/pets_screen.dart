@@ -8,8 +8,6 @@ import '../services/data_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/account_gate.dart';
 import '../widgets/tyto_icons.dart';
-import 'behaviors_sheet.dart';
-import 'lost_pet_screen.dart';
 
 const _speciesOptions = ['chien', 'chat', 'lapin', 'oiseau', 'rongeur', 'reptile', 'autre'];
 
@@ -177,48 +175,6 @@ class _PetsScreenState extends State<PetsScreen> {
                                       parts.isEmpty ? p.species : parts.join(' · '),
                                       style: TytoText.ui(size: 12.5, color: TytoColors.encre.withOpacity(0.6))
                                           .copyWith(height: 1.5),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Wrap(
-                                      spacing: 14,
-                                      runSpacing: 4,
-                                      children: [
-                                        GestureDetector(
-                                          onTap: () => BehaviorsSheet.afficher(context, p),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.lightbulb_outline_rounded,
-                                                  size: 11, color: TytoColors.encre.withOpacity(0.55)),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'Pourquoi il fait ça ?',
-                                                style: TytoText.ui(size: 11.5, color: TytoColors.encre.withOpacity(0.55))
-                                                    .copyWith(decoration: TextDecoration.underline, decorationStyle: TextDecorationStyle.dotted),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                        GestureDetector(
-                                          onTap: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(builder: (_) => LostPetScreen(pet: p)),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(Icons.warning_amber_rounded, size: 11, color: TytoColors.urgence),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'SOS il a disparu',
-                                                style: TytoText.ui(size: 11.5, color: TytoColors.urgence)
-                                                    .copyWith(decoration: TextDecoration.underline, decorationStyle: TextDecorationStyle.dotted),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                   ],
                                 ),
