@@ -123,55 +123,62 @@ class _VeilleScreenState extends State<VeilleScreen> {
           : _loading
           ? const Center(child: CircularProgressIndicator(color: TytoColors.fauve))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
-                  TytoIcon.monitor(size: 46, color: TytoColors.fauve),
-                  const SizedBox(height: 18),
-                  Text(
-                    _pets.isEmpty
-                        ? "Ajoute d'abord un compagnon dans « Mes animaux » :\nTyto pourra ensuite veiller sur sa santé au quotidien."
-                        : "L'analyse quotidienne passe en revue la santé de tes compagnons.",
-                    textAlign: TextAlign.center,
-                    style: TytoText.body(size: 15, color: TytoColors.brume),
-                  ),
-                  const SizedBox(height: 26),
-                  if (_pets.isNotEmpty)
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _running ? null : _runWatch,
-                        icon: _running
-                            ? const SizedBox(
-                                height: 16, width: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.nuit))
-                            : const Icon(Icons.play_arrow_rounded),
-                        label: Text(
-                          _running ? 'Tyto examine tes animaux…' : 'Lancer la veille du jour',
-                          style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.nuit),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: TytoColors.fauve,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                      ),
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: TytoColors.papier,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: TytoColors.encre.withOpacity(0.12)),
+                ),
+                child: Column(
+                  children: [
+                    TytoIcon.monitor(size: 42, color: TytoColors.encre),
+                    const SizedBox(height: 14),
+                    Text(
+                      _pets.isEmpty
+                          ? "Ajoute d'abord un compagnon dans « Mes animaux » :\nTyto pourra ensuite veiller sur sa santé au quotidien."
+                          : "L'analyse quotidienne passe en revue la santé de tes compagnons.",
+                      textAlign: TextAlign.center,
+                      style: TytoText.body(size: 15, color: TytoColors.encre).copyWith(height: 1.5),
                     ),
-                  if (_result != null) ...[
                     const SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: TytoColors.nuit2,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: TytoColors.fauve.withOpacity(0.3)),
+                    if (_pets.isNotEmpty)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _running ? null : _runWatch,
+                          icon: _running
+                              ? const SizedBox(
+                                  height: 16, width: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.nuit))
+                              : const Icon(Icons.play_arrow_rounded),
+                          label: Text(
+                            _running ? 'Tyto examine tes animaux…' : 'Lancer la veille du jour',
+                            style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.nuit),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: TytoColors.fauve,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
                       ),
-                      child: Text(_result!, style: TytoText.body(size: 14)),
-                    ),
+                    if (_result != null) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: TytoColors.fauve.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: TytoColors.fauve.withOpacity(0.35)),
+                        ),
+                        child: Text(_result!, style: TytoText.body(size: 14, color: TytoColors.encre)),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
     );

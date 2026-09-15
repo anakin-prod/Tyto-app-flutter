@@ -23,6 +23,9 @@ class DataService {
     String? sex,
     DateTime? birthdate,
     double? weightKg,
+    bool sterilized = false,
+    String? allergies,
+    String? conditions,
   }) async {
     final userId = _db.auth.currentUser?.id;
     if (userId == null) return;
@@ -35,6 +38,9 @@ class DataService {
       'sex': sex,
       'birthdate': birthdate?.toIso8601String().substring(0, 10),
       'weight_kg': weightKg,
+      'sterilized': sterilized,
+      'allergies': (allergies?.trim().isEmpty ?? true) ? null : allergies!.trim(),
+      'conditions': (conditions?.trim().isEmpty ?? true) ? null : conditions!.trim(),
     };
 
     if (id != null) {
@@ -112,6 +118,9 @@ class DataService {
       sex: row['sex'] as String?,
       birthdate: row['birthdate'] != null ? DateTime.tryParse(row['birthdate'].toString()) : null,
       weightKg: row['weight_kg'] != null ? (row['weight_kg'] as num).toDouble() : null,
+      sterilized: row['sterilized'] == true,
+      allergies: row['allergies'] as String?,
+      conditions: row['conditions'] as String?,
     );
   }
 

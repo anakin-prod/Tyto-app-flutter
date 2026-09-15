@@ -152,11 +152,14 @@ String pickFact(String? species, String? lastFact) {
       : factsGeneral;
   if (pool.isEmpty) return '';
   if (pool.length == 1) return pool.first;
-  String next = lastFact ?? '';
+  // Une boucle "do" pioche toujours au moins une fois, y compris au tout
+  // premier appel (lastFact == null) — avec un "while", cette comparaison
+  // à null ne se déclenchait jamais et renvoyait une chaîne vide.
+  String next;
   var garde = 0;
-  while (next == lastFact && garde < 20) {
+  do {
     next = pool[_rnd.nextInt(pool.length)];
     garde++;
-  }
+  } while (next == lastFact && garde < 20);
   return next;
 }

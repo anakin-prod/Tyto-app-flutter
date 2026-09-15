@@ -145,6 +145,7 @@ class _PetsScreenState extends State<PetsScreen> {
                         p.species,
                         if (p.breed != null) p.breed!,
                         if (ageTxt != null) ageTxt,
+                        if (p.allergies != null && p.allergies!.trim().isNotEmpty) 'allergies connues',
                       ];
                       // La carte sur papier ivoire, comme sur le site,
                       // avec l'icône propre à l'espèce de l'animal.
@@ -208,8 +209,11 @@ class _PetFormState extends State<_PetForm> {
   late TextEditingController _name;
   late TextEditingController _breed;
   late TextEditingController _weight;
+  late TextEditingController _allergies;
+  late TextEditingController _conditions;
   String _species = 'chien';
   DateTime? _birthdate;
+  bool _sterilized = false;
   bool _saving = false;
 
   @override
@@ -218,8 +222,11 @@ class _PetFormState extends State<_PetForm> {
     _name = TextEditingController(text: widget.pet?.name ?? '');
     _breed = TextEditingController(text: widget.pet?.breed ?? '');
     _weight = TextEditingController(text: widget.pet?.weightKg?.toString() ?? '');
+    _allergies = TextEditingController(text: widget.pet?.allergies ?? '');
+    _conditions = TextEditingController(text: widget.pet?.conditions ?? '');
     _species = widget.pet?.species ?? 'chien';
     _birthdate = widget.pet?.birthdate;
+    _sterilized = widget.pet?.sterilized ?? false;
   }
 
   @override
@@ -227,6 +234,8 @@ class _PetFormState extends State<_PetForm> {
     _name.dispose();
     _breed.dispose();
     _weight.dispose();
+    _allergies.dispose();
+    _conditions.dispose();
     super.dispose();
   }
 
@@ -246,6 +255,9 @@ class _PetFormState extends State<_PetForm> {
         breed: _breed.text,
         birthdate: _birthdate,
         weightKg: double.tryParse(_weight.text.replaceAll(',', '.')),
+        sterilized: _sterilized,
+        allergies: _allergies.text,
+        conditions: _conditions.text,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -259,11 +271,22 @@ class _PetFormState extends State<_PetForm> {
 
   InputDecoration _dec(String hint) => InputDecoration(
         hintText: hint,
-        hintStyle: TytoText.ui(color: TytoColors.brume),
+        hintStyle: TytoText.ui(color: TytoColors.encre.withOpacity(0.4)),
         filled: true,
-        fillColor: TytoColors.nuit,
+        fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: TytoColors.encre.withOpacity(0.2)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: TytoColors.encre.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: TytoColors.fauve, width: 1.5),
+        ),
       );
 
   @override
@@ -272,7 +295,7 @@ class _PetFormState extends State<_PetForm> {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: const BoxDecoration(
-          color: TytoColors.nuit2,
+          color: TytoColors.papier,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -286,19 +309,19 @@ class _PetFormState extends State<_PetForm> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: TytoColors.brume.withOpacity(0.4),
+                    color: TytoColors.encre.withOpacity(0.25),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 18),
-              Text(widget.pet == null ? 'Nouveau compagnon' : 'Modifier', style: TytoText.display(size: 19)),
+              Text(widget.pet == null ? 'Nouveau compagnon' : 'Modifier', style: TytoText.display(size: 19, color: TytoColors.encre)),
               const SizedBox(height: 18),
-              Text('Nom', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+              Text('Nom', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
               const SizedBox(height: 6),
-              TextField(controller: _name, style: TytoText.ui(color: TytoColors.lune), decoration: _dec('Max, Plume…')),
+              TextField(controller: _name, style: TytoText.ui(color: TytoColors.encre), decoration: _dec('Max, Plume…')),
               const SizedBox(height: 14),
-              Text('Espèce', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+              Text('Espèce', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
@@ -310,30 +333,30 @@ class _PetFormState extends State<_PetForm> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: on ? TytoColors.fauve.withOpacity(0.18) : TytoColors.nuit,
+                        color: on ? TytoColors.fauve.withOpacity(0.22) : Colors.white,
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: on ? TytoColors.fauve : TytoColors.lune.withOpacity(0.12)),
+                        border: Border.all(color: on ? TytoColors.fauve : TytoColors.encre.withOpacity(0.2)),
                       ),
-                      child: Text(s, style: TytoText.ui(size: 13, color: on ? TytoColors.fauve : TytoColors.brume)),
+                      child: Text(s, style: TytoText.ui(size: 13, color: on ? const Color(0xFF7A5A2A) : TytoColors.encre.withOpacity(0.7))),
                     ),
                   );
                 }).toList(),
               ),
               const SizedBox(height: 14),
-              Text('Race (facultatif)', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+              Text('Race (facultatif)', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
               const SizedBox(height: 6),
-              TextField(controller: _breed, style: TytoText.ui(color: TytoColors.lune), decoration: _dec('Berger australien…')),
+              TextField(controller: _breed, style: TytoText.ui(color: TytoColors.encre), decoration: _dec('Berger australien…')),
               const SizedBox(height: 14),
-              Text('Poids en kg (facultatif)', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+              Text('Poids en kg (facultatif)', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
               const SizedBox(height: 6),
               TextField(
                 controller: _weight,
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: TytoText.ui(color: TytoColors.lune),
+                style: TytoText.ui(color: TytoColors.encre),
                 decoration: _dec('24.5'),
               ),
               const SizedBox(height: 14),
-              Text('Date de naissance (facultatif)', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+              Text('Date de naissance (facultatif)', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
               const SizedBox(height: 6),
               GestureDetector(
                 onTap: () async {
@@ -348,14 +371,50 @@ class _PetFormState extends State<_PetForm> {
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  decoration: BoxDecoration(color: TytoColors.nuit, borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: TytoColors.encre.withOpacity(0.2)),
+                  ),
                   child: Text(
                     _birthdate == null
                         ? 'Choisir une date'
                         : '${_birthdate!.day.toString().padLeft(2, '0')}/${_birthdate!.month.toString().padLeft(2, '0')}/${_birthdate!.year}',
-                    style: TytoText.ui(color: _birthdate == null ? TytoColors.brume : TytoColors.lune),
+                    style: TytoText.ui(color: _birthdate == null ? TytoColors.encre.withOpacity(0.4) : TytoColors.encre),
                   ),
                 ),
+              ),
+              const SizedBox(height: 14),
+              // Stérilisation : une case à cocher, comme sur le site.
+              GestureDetector(
+                onTap: () => setState(() => _sterilized = !_sterilized),
+                child: Row(
+                  children: [
+                    Checkbox(
+                      value: _sterilized,
+                      activeColor: TytoColors.fauve,
+                      onChanged: (v) => setState(() => _sterilized = v ?? false),
+                    ),
+                    Text('Stérilisé(e) / castré(e)', style: TytoText.ui(size: 14, color: TytoColors.encre)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text('Allergies connues', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _allergies,
+                style: TytoText.ui(color: TytoColors.encre),
+                decoration: _dec('poulet, acariens…'),
+              ),
+              const SizedBox(height: 14),
+              Text('Antécédents, traitements en cours', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _conditions,
+                maxLines: 3,
+                style: TytoText.ui(color: TytoColors.encre),
+                decoration: _dec('Opéré du genou en 2024, traitement anti-puces mensuel…'),
               ),
               const SizedBox(height: 22),
               SizedBox(

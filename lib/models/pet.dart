@@ -6,6 +6,9 @@ class Pet {
   final String? sex;
   final DateTime? birthdate;
   final double? weightKg;
+  final bool sterilized;
+  final String? allergies;
+  final String? conditions; // antécédents, traitements en cours
 
   Pet({
     required this.id,
@@ -15,6 +18,9 @@ class Pet {
     this.sex,
     this.birthdate,
     this.weightKg,
+    this.sterilized = false,
+    this.allergies,
+    this.conditions,
   });
 
   int? get ageYears {

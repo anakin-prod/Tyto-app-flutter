@@ -120,14 +120,21 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
         title: Text('Ordonnance', style: TytoText.display(size: 19)),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
-        child: Column(
+        padding: const EdgeInsets.all(16),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: TytoColors.papier,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: TytoColors.encre.withOpacity(0.12)),
+          ),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Photographie l\'ordonnance de ${widget.pet.name}. Tyto en extrait les traitements, '
               'et tu vérifies chaque ligne avant de l\'ajouter au carnet.',
-              style: TytoText.body(size: 14.5, color: TytoColors.brume).copyWith(height: 1.5),
+              style: TytoText.body(size: 14.5, color: TytoColors.encre.withOpacity(0.75)).copyWith(height: 1.5),
             ),
             const SizedBox(height: 16),
 
@@ -144,10 +151,10 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _choisirPhoto(ImageSource.camera),
-                    icon: const Icon(Icons.photo_camera_outlined, size: 17, color: TytoColors.lune),
-                    label: Text('Photographier', style: TytoText.ui(size: 13.5, color: TytoColors.lune)),
+                    icon: const Icon(Icons.photo_camera_outlined, size: 17, color: TytoColors.encre),
+                    label: Text('Photographier', style: TytoText.ui(size: 13.5, color: TytoColors.encre)),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: TytoColors.lune.withOpacity(0.22)),
+                      side: BorderSide(color: TytoColors.encre.withOpacity(0.25)),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -157,10 +164,10 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => _choisirPhoto(ImageSource.gallery),
-                    icon: const Icon(Icons.image_outlined, size: 17, color: TytoColors.lune),
-                    label: Text('Galerie', style: TytoText.ui(size: 13.5, color: TytoColors.lune)),
+                    icon: const Icon(Icons.image_outlined, size: 17, color: TytoColors.encre),
+                    label: Text('Galerie', style: TytoText.ui(size: 13.5, color: TytoColors.encre)),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: TytoColors.lune.withOpacity(0.22)),
+                      side: BorderSide(color: TytoColors.encre.withOpacity(0.25)),
                       padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -202,20 +209,20 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                   child: Text(
                     "La photo est difficile à lire : vérifie attentivement chaque ligne, "
                     "ou reprends une photo plus nette.",
-                    style: TytoText.ui(size: 13, color: TytoColors.lune),
+                    style: TytoText.ui(size: 13, color: TytoColors.encre),
                   ),
                 ),
               if (_resultat!.lines.isEmpty)
                 Text(
                   "Aucun traitement n'a pu être identifié sur cette photo.",
-                  style: TytoText.body(size: 14.5, color: TytoColors.brume),
+                  style: TytoText.body(size: 14.5, color: TytoColors.encre.withOpacity(0.7)),
                 )
               else ...[
-                Text('Traitements détectés', style: TytoText.display(size: 17)),
+                Text('Traitements détectés', style: TytoText.display(size: 17, color: TytoColors.encre)),
                 const SizedBox(height: 4),
                 Text(
                   'Décoche ce qui ne doit pas être ajouté.',
-                  style: TytoText.ui(size: 12.5, color: TytoColors.brume),
+                  style: TytoText.ui(size: 12.5, color: TytoColors.encre.withOpacity(0.6)),
                 ),
                 const SizedBox(height: 10),
                 ..._resultat!.lines.map((l) => _ligne(l)),
@@ -243,6 +250,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
               ],
             ],
           ],
+          ),
         ),
       ),
     );

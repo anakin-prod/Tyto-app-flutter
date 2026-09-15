@@ -32,7 +32,8 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-const _suggestionPool = [
+/// Les 10 questions génériques, pour la conversation « Général ».
+const _suggestionPoolGeneral = [
   "Mon chien a mangé du chocolat, c'est grave ?",
   "Pourquoi mon chat pétrit avec ses pattes ?",
   "Mon lapin ne mange plus depuis hier",
@@ -44,6 +45,21 @@ const _suggestionPool = [
   "Ma perruche reste en boule, que faire ?",
   "Quels aliments sont toxiques pour un chat ?",
 ];
+
+/// Les 10 questions personnalisées au nom de l'animal, quand une
+/// conversation précise est ouverte — mêmes textes que le site.
+List<String> _suggestionPoolPour(String nom) => [
+      'Fais un point santé sur $nom',
+      'Que peut manger $nom sans danger ?',
+      'Quels vaccins prévoir pour $nom ?',
+      'Idées de jeux pour $nom',
+      'Comment savoir si $nom a mal quelque part ?',
+      'À quelle fréquence peser $nom ?',
+      'Que faire si $nom ne mange plus ?',
+      'Comment calmer $nom en cas de stress ?',
+      "Signes d'un coup de chaleur chez $nom",
+      'Quand emmener $nom chez le vétérinaire ?',
+    ];
 
 
 class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin {
@@ -428,10 +444,29 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         ..addAll(_conversations[_cleConversation] ?? []);
       // Le fait affiché suit l'espèce de l'animal ouvert.
       _fait = pickFact(_especeActive, _fait);
+      // Les 3 puces reprennent tout de suite les questions du bon animal,
+      // sans attendre leur rotation naturelle.
+      _chipIdx[0] = 0;
+      _chipIdx[1] = 1;
+      _chipIdx[2] = 2;
     });
   }
 
   String get _cleConversation => _activePetId ?? 'general';
+
+  /// Le nom de l'animal ouvert, s'il y en a un.
+  String? get _nomAnimalActif {
+    if (_activePetId == null) return null;
+    for (final p in _pets) {
+      if (p.id == _activePetId) return p.name;
+    }
+    return null;
+  }
+
+  List<String> get _suggestionPool {
+    final nom = _nomAnimalActif;
+    return nom != null ? _suggestionPoolPour(nom) : _suggestionPoolGeneral;
+  }
 
   @override
   Widget build(BuildContext context) {

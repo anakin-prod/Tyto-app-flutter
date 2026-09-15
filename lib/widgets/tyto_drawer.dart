@@ -67,10 +67,15 @@ class TytoDrawer extends StatelessWidget {
       elevation: 0,
       child: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [TytoColors.nuit2, TytoColors.nuit],
+          gradient: RadialGradient(
+            center: Alignment(-0.3, -0.7),
+            radius: 1.5,
+            colors: [
+              TytoColors.nuit2,
+              TytoColors.nuit,
+              Color(0xFF0A0E18), // plus profond que le nuit habituel
+            ],
+            stops: [0.0, 0.55, 1.0],
           ),
         ),
         child: Stack(
@@ -217,7 +222,7 @@ class TytoDrawer extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Tyto', style: TytoText.display(size: 20)),
-              Text("L'IA du monde animal", style: TytoText.ui(size: 10.5, color: TytoColors.brume)),
+              Text("L'IA du monde animal", style: TytoText.ui(size: 10.5, color: TytoColors.brume).copyWith(fontStyle: FontStyle.italic)),
             ],
           ),
           const Spacer(),
@@ -232,7 +237,7 @@ class TytoDrawer extends StatelessWidget {
 
   Widget _buildRubriques() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(24, 16, 16, 6),
       child: Stack(
         children: [
           Positioned(
@@ -254,7 +259,7 @@ class TytoDrawer extends StatelessWidget {
                 onTap: () => onSelect(item.id),
                 borderRadius: BorderRadius.circular(12),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Row(
                     children: [
                       Container(
@@ -263,13 +268,18 @@ class TytoDrawer extends StatelessWidget {
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: lit ? TytoColors.fauve.withOpacity(0.17) : TytoColors.nuit2,
+                          gradient: lit
+                              ? RadialGradient(
+                                  colors: [TytoColors.fauve.withOpacity(0.28), TytoColors.fauve.withOpacity(0.1)],
+                                )
+                              : null,
+                          color: lit ? null : TytoColors.nuit2.withOpacity(0.6),
                           border: Border.all(
-                            color: lit ? TytoColors.fauve : TytoColors.lune.withOpacity(0.13),
-                            width: 1.5,
+                            color: lit ? TytoColors.fauve.withOpacity(0.85) : TytoColors.lune.withOpacity(0.12),
+                            width: lit ? 1.2 : 1,
                           ),
                           boxShadow: lit
-                              ? [BoxShadow(color: TytoColors.fauve.withOpacity(0.35), blurRadius: 14, spreadRadius: 2)]
+                              ? [BoxShadow(color: TytoColors.fauve.withOpacity(0.22), blurRadius: 16, spreadRadius: 1)]
                               : null,
                         ),
                         child: _iconFor(item.id, size: 16, color: lit ? TytoColors.fauve : TytoColors.brume),
@@ -280,13 +290,15 @@ class TytoDrawer extends StatelessWidget {
                         children: [
                           Text(
                             item.label,
-                            style: TytoText.ui(
-                              size: 15,
+                            style: TytoText.display(
+                              size: 15.5,
                               weight: lit ? FontWeight.w700 : FontWeight.w600,
-                              color: lit ? TytoColors.lune : TytoColors.lune.withOpacity(0.7),
+                              color: lit ? TytoColors.lune : TytoColors.lune.withOpacity(0.72),
                             ),
                           ),
-                          Text(item.sub, style: TytoText.ui(size: 11, color: TytoColors.brume)),
+                          Text(item.sub,
+                              style: TytoText.ui(size: 10.5, color: TytoColors.brume)
+                                  .copyWith(letterSpacing: 0.2)),
                         ],
                       ),
                     ],

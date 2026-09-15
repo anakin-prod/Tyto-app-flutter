@@ -438,18 +438,31 @@ class _EventFormState extends State<_EventForm> {
 
   InputDecoration _dec(String hint) => InputDecoration(
         hintText: hint,
-        hintStyle: TytoText.ui(color: TytoColors.brume),
+        hintStyle: TytoText.ui(color: TytoColors.encre.withOpacity(0.4)),
         filled: true,
-        fillColor: TytoColors.nuit,
+        fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: TytoColors.encre.withOpacity(0.2)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: TytoColors.encre.withOpacity(0.2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: TytoColors.fauve, width: 1.5),
+        ),
       );
 
   Widget _dateField(String label, DateTime? value, ValueChanged<DateTime> onPick, {bool optional = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+        Text(label,
+            style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6))
+                .copyWith(letterSpacing: 1.1)),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: () async {
@@ -464,10 +477,14 @@ class _EventFormState extends State<_EventForm> {
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            decoration: BoxDecoration(color: TytoColors.nuit, borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: TytoColors.encre.withOpacity(0.2)),
+            ),
             child: Text(
               value == null ? (optional ? 'Aucun rappel' : 'Choisir une date') : _fmt(value),
-              style: TytoText.ui(color: value == null ? TytoColors.brume : TytoColors.lune),
+              style: TytoText.ui(color: value == null ? TytoColors.encre.withOpacity(0.4) : TytoColors.encre),
             ),
           ),
         ),
@@ -481,7 +498,7 @@ class _EventFormState extends State<_EventForm> {
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: const BoxDecoration(
-          color: TytoColors.nuit2,
+          color: TytoColors.papier,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -495,15 +512,15 @@ class _EventFormState extends State<_EventForm> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: TytoColors.brume.withOpacity(0.4),
+                    color: TytoColors.encre.withOpacity(0.25),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 18),
-              Text('Ajouter au carnet', style: TytoText.display(size: 19)),
+              Text('Ajouter au carnet', style: TytoText.display(size: 19, color: TytoColors.encre)),
               const SizedBox(height: 18),
-              Text('Type', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+              Text('Type', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 8,
@@ -515,11 +532,11 @@ class _EventFormState extends State<_EventForm> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: on ? TytoColors.fauve.withOpacity(0.18) : TytoColors.nuit,
+                        color: on ? TytoColors.fauve.withOpacity(0.22) : Colors.white,
                         borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: on ? TytoColors.fauve : TytoColors.lune.withOpacity(0.12)),
+                        border: Border.all(color: on ? TytoColors.fauve : TytoColors.encre.withOpacity(0.2)),
                       ),
-                      child: Text(_typeLabel(t), style: TytoText.ui(size: 13, color: on ? TytoColors.fauve : TytoColors.brume)),
+                      child: Text(_typeLabel(t), style: TytoText.ui(size: 13, color: on ? const Color(0xFF7A5A2A) : TytoColors.encre.withOpacity(0.7))),
                     ),
                   );
                 }).toList(),
@@ -530,19 +547,19 @@ class _EventFormState extends State<_EventForm> {
               _dateField('Prochain rappel (facultatif)', _nextDue, (d) => setState(() => _nextDue = d), optional: true),
               const SizedBox(height: 14),
               if (_type == 'poids') ...[
-                Text('Poids en kg', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+                Text('Poids en kg', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
                 const SizedBox(height: 6),
                 TextField(
                   controller: _value,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: TytoText.ui(color: TytoColors.lune),
+                  style: TytoText.ui(color: TytoColors.encre),
                   decoration: _dec('24.5'),
                 ),
                 const SizedBox(height: 14),
               ],
               Row(
                 children: [
-                  Text('Notes (facultatif)', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+                  Text('Notes (facultatif)', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
                   const Spacer(),
                   if (widget.isPro)
                     VoiceButton(
@@ -561,7 +578,7 @@ class _EventFormState extends State<_EventForm> {
               TextField(
                 controller: _notes,
                 maxLines: 2,
-                style: TytoText.ui(color: TytoColors.lune),
+                style: TytoText.ui(color: TytoColors.encre),
                 decoration: _dec('Rappel annuel, clinique du parc…'),
               ),
               const SizedBox(height: 22),
