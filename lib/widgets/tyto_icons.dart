@@ -32,6 +32,11 @@ const _monitorPath = '''
 <path d="M6.4 11.3h2.1l1.3-3 2.2 5.6 1.4-2.6h3.9" />
 <path d="M9 21h6M12 17v4" />''';
 
+/// L'étoile unique à 4 branches (IconSparkle du site) — celle des puces
+/// de suggestion, pas une icône générique à plusieurs étoiles.
+const _sparklePath =
+    '<path d="M12 2.8 13.75 9.05 20 10.8 13.75 12.55 12 18.8 10.25 12.55 4 10.8 10.25 9.05Z" />';
+
 /// La chouette — le dessin EXACT du logo (même grille 120x150, mêmes courbes).
 /// Fond transparent : plus de carré autour, contrairement à une image PNG.
 const _owlPath = '''
@@ -183,6 +188,14 @@ class TytoIcon extends StatelessWidget {
 
   factory TytoIcon.monitor({double size = 18, Color? color}) =>
       TytoIcon._(_wrap(_monitorPath), size: size, color: color);
+
+  /// L'étoile unique à 4 branches des puces de suggestion, comme sur le
+  /// site (IconSparkle) — pas l'icône générique à plusieurs étoiles.
+  factory TytoIcon.sparkle({double size = 14, Color? color}) => TytoIcon._(
+        _wrap(_sparklePath, strokeWidth: 1.5),
+        size: size,
+        color: color,
+      );
 
   /// La chouette du logo. Sa grille est 120x150, donc plus haute que large :
   /// on garde le même rapport que sur le site (largeur = 0.82 x hauteur).

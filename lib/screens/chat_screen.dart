@@ -12,6 +12,7 @@ import '../widgets/tyto_icons.dart';
 import '../widgets/owl_sketch.dart';
 import '../widgets/paw_trails.dart';
 import '../widgets/voice_button.dart';
+import '../widgets/owl_eye_button.dart';
 import '../models/pet.dart';
 import '../models/health_event.dart';
 import '../services/data_service.dart';
@@ -967,16 +968,18 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                     ),
                   Row(
                 children: [
-                  IconButton(
-                    onPressed: _compressionEnCours ? null : _choisirPhoto,
-                    icon: _compressionEnCours
-                        ? const SizedBox(
+                  _compressionEnCours
+                      ? const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: SizedBox(
                             height: 16, width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.fauve))
-                        : Icon(Icons.image_outlined,
-                            color: (_isPremium || _isPro) ? TytoColors.lune : TytoColors.brume),
-                    tooltip: (_isPremium || _isPro) ? 'Joindre une photo' : 'Joindre une photo (Premium)',
-                  ),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.fauve),
+                          ),
+                        )
+                      : OwlEyeButton(
+                          onTap: _choisirPhoto,
+                          actif: _isPremium || _isPro,
+                        ),
                   Expanded(
                     child: TextField(
                       controller: _controller,
@@ -1034,9 +1037,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      // Un Center par bloc, pas un seul Center autour de tout : sinon,
+      // dès que les puces changent de taille (une question sur 2 lignes
+      // au lieu d'une), tout le groupe se recentre — chouette comprise.
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -1050,8 +1056,6 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               style: TytoText.body(size: 17, color: TytoColors.brume)
                   .copyWith(fontStyle: FontStyle.italic, height: 1.5),
             ),
-            // La même phrase de réassurance que sur le site, pour
-            // quelqu'un qui n'a pas encore enregistré d'animal.
             if (!AuthService.isSignedIn) ...[
               const SizedBox(height: 10),
               Text(
@@ -1061,49 +1065,61 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               ),
             ],
             const SizedBox(height: 18),
-            ...List.generate(_chipIdx.length, (slot) {
-              final pIdx = _chipIdx[slot];
-              return AnimatedOpacity(
-                opacity: _chipVisible[slot] ? 1 : 0,
-                duration: _fadeDuration,
-                curve: Curves.easeInOut,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 9),
-                  child: SizedBox(
-                    width: double.infinity,
-                    // Une hauteur fixe : sans elle, une question plus longue
-                    // ou plus courte que la précédente change la taille de
-                    // la puce, et toute la pile semble "sauter".
-                    height: 52,
-                    child: OutlinedButton(
-                      onPressed: () => _sendMessage(_suggestionPool[pIdx]),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: TytoColors.lune.withOpacity(0.05),
-                        side: BorderSide(color: TytoColors.lune.withOpacity(0.22)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        alignment: Alignment.centerLeft,
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.auto_awesome, size: 14, color: TytoColors.fauve),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _suggestionPool[pIdx],
-                              style: TytoText.ui(size: 14, color: TytoColors.lune),
-                              textAlign: TextAlign.left,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+            // Un espace toujours identique, quelle que soit la longueur
+            // des questions affichées : les puces peuvent respirer et
+            // passer sur 2 lignes sans jamais faire bouger la chouette.
+            SizedBox(
+              height: 210,
+              child: Column(
+                children: List.generate(_chipIdx.length, (slot) {
+                  final pIdx = _chipIdx[slot];
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 9),
+                      child: AnimatedSlide(
+                        // Le même mouvement discret que sur le site : la
+                        // puce glisse de quelques pixels en apparaissant.
+                        offset: _chipVisible[slot] ? Offset.zero : const Offset(0, 0.15),
+                        duration: _fadeDuration,
+                        curve: Curves.easeInOut,
+                        child: AnimatedOpacity(
+                          opacity: _chipVisible[slot] ? 1 : 0,
+                          duration: _fadeDuration,
+                          curve: Curves.easeInOut,
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: () => _sendMessage(_suggestionPool[pIdx]),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: TytoColors.lune.withOpacity(0.07),
+                                side: BorderSide(color: TytoColors.lune.withOpacity(0.23)),
+                                padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                alignment: Alignment.centerLeft,
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  TytoIcon.sparkle(size: 14, color: TytoColors.fauve),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      _suggestionPool[pIdx],
+                                      style: TytoText.ui(size: 14.5, color: TytoColors.lune).copyWith(height: 1.35),
+                                      textAlign: TextAlign.left,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              );
-            }),
+                  );
+                }),
+              ),
+            ),
           ],
         ),
       ),
