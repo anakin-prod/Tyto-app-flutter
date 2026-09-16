@@ -50,17 +50,30 @@ class _OwlEyeButtonState extends State<OwlEyeButton> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final couleur = widget.actif ? TytoColors.fauve : TytoColors.brume;
-    return IconButton(
-      onPressed: widget.onTap,
-      tooltip: widget.actif ? "L'œil de Tyto — joindre une photo" : 'Joindre une photo (Premium)',
-      icon: AnimatedBuilder(
-        animation: _c,
-        builder: (context, _) {
-          if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
-            return _oeil(1, couleur);
-          }
-          return _oeil(_ouverture(_c.value), couleur);
-        },
+    return Tooltip(
+      message: widget.actif ? "L'œil de Tyto — joindre une photo" : 'Joindre une photo (Premium)',
+      child: InkWell(
+        onTap: widget.onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 38,
+          height: 38,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            // Le même fin liseré que le bouton du site (LUNE à ~19 %).
+            border: Border.all(color: TytoColors.lune.withOpacity(0.19)),
+          ),
+          child: AnimatedBuilder(
+            animation: _c,
+            builder: (context, _) {
+              if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {
+                return _oeil(1, couleur);
+              }
+              return _oeil(_ouverture(_c.value), couleur);
+            },
+          ),
+        ),
       ),
     );
   }

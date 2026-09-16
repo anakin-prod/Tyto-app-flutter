@@ -1069,7 +1069,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             // des questions affichées : les puces peuvent respirer et
             // passer sur 2 lignes sans jamais faire bouger la chouette.
             SizedBox(
-              height: 210,
+              height: 250,
               child: Column(
                 children: List.generate(_chipIdx.length, (slot) {
                   final pIdx = _chipIdx[slot];
