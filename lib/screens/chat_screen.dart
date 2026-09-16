@@ -980,6 +980,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                           onTap: _choisirPhoto,
                           actif: _isPremium || _isPro,
                         ),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: TextField(
                       controller: _controller,

@@ -8,6 +8,9 @@ import '../models/pet.dart';
 import '../services/data_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/account_gate.dart';
+import '../widgets/tyto_drawer.dart';
+import '../widgets/drawer_navigation.dart';
+import '../services/user_service.dart';
 
 String _typeLabel(String t) {
   switch (t) {
@@ -35,6 +38,8 @@ class _TableauScreenState extends State<TableauScreen> {
   List<HealthEvent> _upcoming = [];
   Map<String, Pet> _petsById = {};
   bool _loading = true;
+  bool _isPro = false;
+  bool _isPremium = false;
 
   @override
   void initState() {
@@ -48,6 +53,11 @@ class _TableauScreenState extends State<TableauScreen> {
       return;
     }
     setState(() => _loading = true);
+    final token = AuthService.currentSession?.accessToken;
+    if (token != null) {
+      final profil = await UserService.fetchMe(token);
+      if (mounted) setState(() { _isPro = profil.pro; _isPremium = profil.premium; });
+    }
     try {
       final results = await Future.wait([
         DataService.loadUpcoming(),
@@ -72,6 +82,12 @@ class _TableauScreenState extends State<TableauScreen> {
     final now = DateTime.now();
     return Scaffold(
       backgroundColor: Colors.transparent,
+      drawer: TytoDrawer(
+        activeId: 'tableau',
+        onSelect: (id) => handleDrawerNavigation(context, 'tableau', id),
+        isPro: _isPro,
+        isPremium: _isPremium,
+      ),
       appBar: AppBar(title: Text('Tableau des rappels', style: TytoText.display(size: 19))),
       body: !AuthService.isSignedIn
           ? const AccountGate()

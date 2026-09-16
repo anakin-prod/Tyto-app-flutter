@@ -207,9 +207,17 @@ class TytoDrawer extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Tyto', style: TytoText.display(size: 22, color: TytoColors.lune)),
+              IntrinsicWidth(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tyto', style: TytoText.display(size: 22, color: TytoColors.lune)),
+                    const SizedBox(height: 3),
+                    Container(height: 1.5, color: TytoColors.fauve),
+                  ],
+                ),
+              ),
               const SizedBox(height: 3),
-              Container(width: 26, height: 1.5, color: TytoColors.fauve, margin: const EdgeInsets.only(bottom: 3)),
               Text("L'IA du monde animal",
                   style: TytoText.ui(size: 10.5, color: TytoColors.brume).copyWith(fontStyle: FontStyle.italic)),
             ],

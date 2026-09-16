@@ -14,6 +14,8 @@ import '../widgets/voice_button.dart';
 import '../services/user_service.dart';
 import '../services/pro_service.dart';
 import '../services/pdf_service.dart';
+import '../widgets/tyto_drawer.dart';
+import '../widgets/drawer_navigation.dart';
 import 'prescription_screen.dart';
 
 const _eventTypes = ['vaccin', 'poids', 'vermifuge', 'visite', 'traitement'];
@@ -67,6 +69,7 @@ class _CarnetScreenState extends State<CarnetScreen> {
   Pet? _selected;
   bool _loading = true;
   bool _isPro = false;
+  bool _isPremium = false;
   bool _synthLoading = false;
   bool _exportLoading = false;
   VetReport? _synthese;
@@ -90,7 +93,10 @@ class _CarnetScreenState extends State<CarnetScreen> {
       final token = AuthService.currentSession?.accessToken;
       if (token != null) {
         final profil = await UserService.fetchMe(token);
-        if (mounted) _isPro = profil.pro;
+        if (mounted) {
+          _isPro = profil.pro;
+          _isPremium = profil.premium;
+        }
       }
       final pets = await DataService.loadPets();
       final choisi = _selected ?? (pets.isNotEmpty ? pets.first : null);
@@ -362,6 +368,12 @@ class _CarnetScreenState extends State<CarnetScreen> {
     final title = _selected == null ? 'Carnet de santé' : 'Carnet · ${_selected!.name}';
     return Scaffold(
       backgroundColor: Colors.transparent,
+      drawer: TytoDrawer(
+        activeId: 'carnet',
+        onSelect: (id) => handleDrawerNavigation(context, 'carnet', id),
+        isPro: _isPro,
+        isPremium: _isPremium,
+      ),
       appBar: AppBar(
         title: Text(title, style: TytoText.display(size: 18)),
         actions: [

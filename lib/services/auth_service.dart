@@ -14,6 +14,16 @@ class AuthService {
     );
   }
 
+  /// Connexion par mot de passe — utilisée uniquement par le compte que
+  /// Google utilise pour examiner l'application avant publication.
+  /// Les examinateurs ne peuvent pas recevoir de lien magique (ils n'ont
+  /// pas accès à la boîte mail), il leur faut donc un accès direct.
+  /// Ce n'est PAS une porte dérobée : c'est un vrai compte Supabase
+  /// ordinaire, avec son propre mot de passe, révocable à tout moment.
+  static Future<void> signInWithPassword(String email, String password) async {
+    await _client.auth.signInWithPassword(email: email, password: password);
+  }
+
   /// Vrai pendant qu'une connexion Google est en cours (le temps que
   /// l'utilisateur choisisse son compte dans le navigateur et revienne).
   /// Sans ce marqueur, l'app recréerait une session anonyme entre-temps

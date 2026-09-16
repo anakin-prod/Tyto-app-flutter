@@ -17,8 +17,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _sending = false;
   bool _linkSent = false;
+  bool _modeMotDePasse = false; // replié par défaut
   String? _errorMessage;
   StreamSubscription<AuthState>? _sub;
 
@@ -40,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _sub?.cancel();
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -60,6 +63,28 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _errorMessage = "Impossible d'envoyer le lien pour l'instant. Réessaie dans un instant.");
     } finally {
       setState(() => _sending = false);
+    }
+  }
+
+  /// Connexion directe par mot de passe — sert au compte d'examen Google.
+  Future<void> _connexionMotDePasse() async {
+    final email = _emailController.text.trim();
+    final motDePasse = _passwordController.text;
+    if (email.isEmpty || motDePasse.isEmpty) {
+      setState(() => _errorMessage = 'Renseigne ton email et ton mot de passe.');
+      return;
+    }
+    setState(() {
+      _sending = true;
+      _errorMessage = null;
+    });
+    try {
+      await AuthService.signInWithPassword(email, motDePasse);
+      // L'écran se referme tout seul via l'écoute des changements de session.
+    } catch (e) {
+      if (mounted) setState(() => _errorMessage = 'Email ou mot de passe incorrect.');
+    } finally {
+      if (mounted) setState(() => _sending = false);
     }
   }
 
@@ -155,6 +180,51 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                // Connexion par mot de passe : repliée par défaut, elle
+                // ne sert qu'au compte d'examen de Google (les
+                // examinateurs ne peuvent pas recevoir de lien magique).
+                const SizedBox(height: 14),
+                if (!_modeMotDePasse)
+                  Center(
+                    child: TextButton(
+                      onPressed: () => setState(() => _modeMotDePasse = true),
+                      child: Text('Se connecter avec un mot de passe',
+                          style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
+                    ),
+                  )
+                else ...[
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    style: TytoText.ui(color: TytoColors.lune),
+                    decoration: InputDecoration(
+                      hintText: 'Mot de passe',
+                      hintStyle: TytoText.ui(color: TytoColors.brume),
+                      filled: true,
+                      fillColor: TytoColors.nuit2,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onSubmitted: (_) => _connexionMotDePasse(),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _sending ? null : _connexionMotDePasse,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: TytoColors.fauve,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: Text('Se connecter',
+                          style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.nuit)),
+                    ),
+                  ),
+                ],
               ],
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),

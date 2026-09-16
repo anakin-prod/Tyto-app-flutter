@@ -8,6 +8,9 @@ import '../services/data_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/account_gate.dart';
 import '../widgets/tyto_icons.dart';
+import '../widgets/tyto_drawer.dart';
+import '../widgets/drawer_navigation.dart';
+import '../services/user_service.dart';
 
 class VeilleScreen extends StatefulWidget {
   const VeilleScreen({super.key});
@@ -21,6 +24,8 @@ class _VeilleScreenState extends State<VeilleScreen> {
   bool _running = false;
   List<Pet> _pets = [];
   String? _result;
+  bool _isPro = false;
+  bool _isPremium = false;
 
   @override
   void initState() {
@@ -32,6 +37,11 @@ class _VeilleScreenState extends State<VeilleScreen> {
     if (!AuthService.isSignedIn) {
       setState(() => _loading = false);
       return;
+    }
+    final token = AuthService.currentSession?.accessToken;
+    if (token != null) {
+      final profil = await UserService.fetchMe(token);
+      if (mounted) setState(() { _isPro = profil.pro; _isPremium = profil.premium; });
     }
     try {
       final pets = await DataService.loadPets();
@@ -117,6 +127,12 @@ class _VeilleScreenState extends State<VeilleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      drawer: TytoDrawer(
+        activeId: 'veille',
+        onSelect: (id) => handleDrawerNavigation(context, 'veille', id),
+        isPro: _isPro,
+        isPremium: _isPremium,
+      ),
       appBar: AppBar(title: Text('Veille sanitaire', style: TytoText.display(size: 19))),
       body: !AuthService.isSignedIn
           ? const AccountGate()
