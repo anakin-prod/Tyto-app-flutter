@@ -13,6 +13,7 @@ import '../widgets/owl_sketch.dart';
 import '../widgets/paw_trails.dart';
 import '../widgets/voice_button.dart';
 import '../widgets/owl_eye_button.dart';
+import '../widgets/history_sheet.dart';
 import '../models/pet.dart';
 import '../models/health_event.dart';
 import '../services/data_service.dart';
@@ -192,6 +193,28 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         rappels: rappels,
         nomsAnimaux: {for (final p in pets) p.id: p.name},
       );
+
+      // On restaure l'historique de chaque conversation — sans ça, tout
+      // disparaissait à la fermeture de l'app, contrairement au site.
+      final historique = await DataService.loadConversations();
+      if (!mounted) return;
+      setState(() {
+        historique.forEach((cle, messages) {
+          _conversations[cle] = messages
+              .map((m) => _Message(
+                    role: m['role'] as String,
+                    content: m['content'] as String,
+                    hasImage: m['hasImage'] as bool,
+                    date: m['date'] as DateTime,
+                  ))
+              .toList();
+        });
+        // Si la conversation actuellement ouverte est vide (premier
+        // affichage), on y verse directement son historique restauré.
+        if (_thread.isEmpty && _conversations[_cleConversation] != null) {
+          _thread.addAll(_conversations[_cleConversation]!);
+        }
+      });
     } catch (_) {
       // Pas de rappels affichés si le chargement échoue : ce n'est pas
       // bloquant, le chat reste utilisable.
@@ -316,6 +339,14 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     });
     _controller.clear();
     _scrollToBottom();
+    // Sauvegardé au fil de l'eau, comme sur le site : rien n'est perdu
+    // si l'app se ferme en cours de route.
+    DataService.saveMessage(
+      threadKey: _cleConversation,
+      role: 'user',
+      content: text.isEmpty ? '(photo)' : text,
+      hasImage: photoEnvoyee != null,
+    );
 
     // On n'envoie que les 12 derniers messages, comme le site : au-delà,
     // ça coûte cher sans améliorer la réponse.
@@ -341,6 +372,15 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         ReviewService.signalerReponseReussie();
       }
     });
+    // On ne garde pas les messages d'erreur dans l'historique : ce ne
+    // sont pas de vrais échanges avec Tyto.
+    if (!result.isError) {
+      DataService.saveMessage(
+        threadKey: _cleConversation,
+        role: 'assistant',
+        content: result.text ?? '',
+      );
+    }
     _scrollToBottom();
   }
 
@@ -371,7 +411,87 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     });
   }
 
-  void _resetConversation() => setState(() => _thread.clear());
+  Future<void> _resetConversation() async {
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: TytoColors.nuit2,
+        title: Text('Effacer cette conversation ?', style: TytoText.display(size: 17, color: TytoColors.lune)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: TytoText.ui(color: TytoColors.brume))),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Effacer', style: TytoText.ui(color: TytoColors.urgence, weight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirme != true) return;
+    final cle = _cleConversation;
+    setState(() {
+      _thread.clear();
+      _conversations.remove(cle);
+    });
+    await DataService.deleteConversation(cle);
+  }
+
+  /// Regroupe la conversation actuelle par jour, et ouvre le panneau
+  /// pour la parcourir ou l'effacer.
+  void _ouvrirHistorique() {
+    final jours = <HistoryDay>[];
+    DateTime? jourCourant;
+    int debutJour = 0;
+    String apercuJour = '';
+    int compteJour = 0;
+
+    void cloreJour(int finIndex) {
+      if (jourCourant == null) return;
+      jours.add(HistoryDay(
+        jour: jourCourant!,
+        apercu: apercuJour,
+        nombreMessages: compteJour,
+        indexPremierMessage: debutJour,
+      ));
+    }
+
+    for (var i = 0; i < _thread.length; i++) {
+      final m = _thread[i];
+      final j = DateTime(m.date.year, m.date.month, m.date.day);
+      if (jourCourant == null || j != jourCourant) {
+        cloreJour(i - 1);
+        jourCourant = j;
+        debutJour = i;
+        compteJour = 0;
+        apercuJour = m.content;
+      }
+      compteJour++;
+    }
+    cloreJour(_thread.length - 1);
+
+    HistorySheet.afficher(
+      context,
+      jours: jours.reversed.toList(),
+      titre: _nomAnimalActif ?? 'Général',
+      onJumpTo: (index) {
+        // Une estimation raisonnable de la position : suffisante pour
+        // arriver près du bon jour, sans dépendance supplémentaire.
+        final cible = index * 92.0;
+        _scrollController.animateTo(
+          cible.clamp(0, _scrollController.position.maxScrollExtent),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOut,
+        );
+      },
+      onEffacer: () async {
+        final cle = _cleConversation;
+        setState(() {
+          _thread.clear();
+          _conversations.remove(cle);
+        });
+        await DataService.deleteConversation(cle);
+      },
+    );
+  }
 
   void _openSos() {
     Navigator.push(
@@ -604,6 +724,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               ),
             ],
             const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.history_rounded, color: TytoColors.brume, size: 21),
+              tooltip: 'Historique des conversations',
+              onPressed: _ouvrirHistorique,
+            ),
             if (_thread.isNotEmpty)
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: TytoColors.brume, size: 21),
@@ -1197,5 +1322,7 @@ class _Message {
   final String role;
   final String content;
   final bool hasImage;
-  _Message({required this.role, required this.content, this.hasImage = false});
+  final DateTime date;
+  _Message({required this.role, required this.content, this.hasImage = false, DateTime? date})
+      : date = date ?? DateTime.now();
 }

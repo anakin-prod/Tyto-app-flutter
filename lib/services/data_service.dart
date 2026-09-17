@@ -135,4 +135,70 @@ class DataService {
       notes: row['notes'] as String?,
     );
   }
+
+  // ---------- Historique des conversations ----------
+  // Chaque animal (et « général ») a sa propre conversation, sauvegardée
+  // au fil de l'eau — comme sur le site — pour ne rien perdre à la
+  // fermeture de l'app.
+
+  static Future<void> saveMessage({
+    required String threadKey,
+    required String role,
+    required String content,
+    bool hasImage = false,
+  }) async {
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) return;
+    try {
+      await _db.from('messages').insert({
+        'user_id': userId,
+        'thread_key': threadKey,
+        'role': role,
+        'content': content,
+        'has_image': hasImage,
+      });
+    } catch (e) {
+      // Une sauvegarde ratée ne doit jamais bloquer la conversation.
+    }
+  }
+
+  /// Les 200 derniers messages, tous fils confondus — comme sur le site.
+  static Future<Map<String, List<Map<String, dynamic>>>> loadConversations() async {
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) return {};
+    try {
+      final rows = await _db
+          .from('messages')
+          .select('thread_key, role, content, has_image, created_at')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false)
+          .limit(200);
+
+      final groupes = <String, List<Map<String, dynamic>>>{};
+      for (final row in (rows as List).reversed) {
+        final cle = row['thread_key'] as String;
+        (groupes[cle] ??= []).add({
+          'role': row['role'],
+          'content': row['content'],
+          'hasImage': row['has_image'] == true,
+          'date': DateTime.tryParse(row['created_at'].toString()) ?? DateTime.now(),
+        });
+      }
+      return groupes;
+    } catch (e) {
+      return {};
+    }
+  }
+
+  /// Efface une conversation entière — utilisé pour « Effacer cet
+  /// historique » depuis le panneau.
+  static Future<void> deleteConversation(String threadKey) async {
+    final userId = _db.auth.currentUser?.id;
+    if (userId == null) return;
+    try {
+      await _db.from('messages').delete().eq('thread_key', threadKey).eq('user_id', userId);
+    } catch (e) {
+      // Silencieux : au pire, l'historique réapparaîtra au prochain chargement.
+    }
+  }
 }
