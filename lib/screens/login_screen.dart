@@ -101,12 +101,24 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      // Sans ça, l'ouverture du clavier faisait déborder la colonne
+      // (barre jaune et noire) : le contenu peut maintenant glisser.
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+          child: ConstrainedBox(
+            // La colonne reste centrée verticalement tant qu'il y a la
+            // place, et se met à défiler seulement quand il en manque.
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height -
+                  MediaQuery.of(context).padding.vertical -
+                  MediaQuery.of(context).viewInsets.bottom -
+                  48,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               const OwlSketch(size: 52),
               const SizedBox(height: 14),
               Text('Tyto', style: TytoText.display(size: 30)),
@@ -141,11 +153,35 @@ class _LoginScreenState extends State<LoginScreen> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                   ),
                 ),
+                // Le mot de passe se place juste sous l'email : les deux
+                // champs d'un même formulaire doivent rester ensemble.
+                if (_modeMotDePasse) ...[
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    style: TytoText.ui(color: TytoColors.lune),
+                    decoration: InputDecoration(
+                      hintText: 'Mot de passe',
+                      hintStyle: TytoText.ui(color: TytoColors.brume),
+                      filled: true,
+                      fillColor: TytoColors.nuit2,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onSubmitted: (_) => _connexionMotDePasse(),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _sending ? null : _sendMagicLink,
+                    onPressed: _sending
+                        ? null
+                        : (_modeMotDePasse ? _connexionMotDePasse : _sendMagicLink),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: TytoColors.fauve,
                       foregroundColor: TytoColors.nuit,
@@ -154,7 +190,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: _sending
                         ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text('Recevoir un lien de connexion', style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.nuit)),
+                        : Text(
+                            _modeMotDePasse ? 'Se connecter' : 'Recevoir un lien de connexion',
+                            style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.nuit),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -180,57 +219,30 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-                // Connexion par mot de passe : repliée par défaut, elle
-                // ne sert qu'au compte d'examen de Google (les
-                // examinateurs ne peuvent pas recevoir de lien magique).
-                const SizedBox(height: 14),
-                if (!_modeMotDePasse)
-                  Center(
-                    child: TextButton(
-                      onPressed: () => setState(() => _modeMotDePasse = true),
-                      child: Text('Se connecter avec un mot de passe',
-                          style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
-                    ),
-                  )
-                else ...[
-                  TextField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    style: TytoText.ui(color: TytoColors.lune),
-                    decoration: InputDecoration(
-                      hintText: 'Mot de passe',
-                      hintStyle: TytoText.ui(color: TytoColors.brume),
-                      filled: true,
-                      fillColor: TytoColors.nuit2,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    onSubmitted: (_) => _connexionMotDePasse(),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _sending ? null : _connexionMotDePasse,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: TytoColors.fauve,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      child: Text('Se connecter',
-                          style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.nuit)),
+                // Le lien reste tout en bas : il ne sert qu'au compte
+                // d'examen de Google, pas aux vrais utilisateurs.
+                const SizedBox(height: 10),
+                Center(
+                  child: TextButton(
+                    onPressed: () => setState(() {
+                      _modeMotDePasse = !_modeMotDePasse;
+                      _errorMessage = null;
+                    }),
+                    child: Text(
+                      _modeMotDePasse
+                          ? 'Revenir au lien de connexion'
+                          : 'Se connecter avec un mot de passe',
+                      style: TytoText.ui(size: 12.5, color: TytoColors.brume),
                     ),
                   ),
-                ],
+                ),
               ],
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Text(_errorMessage!, style: TytoText.ui(size: 13, color: TytoColors.urgence), textAlign: TextAlign.center),
               ],
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -3,6 +3,7 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../services/billing_service.dart';
+import '../services/legal_service.dart';
 import '../screens/login_screen.dart';
 import '../screens/team_screen.dart';
 import 'tyto_icons.dart';
@@ -49,7 +50,7 @@ Widget _iconFor(String id, {required double size, required Color color}) {
 /// cadre doré double, des coins ornementés façon carton d'invitation,
 /// des médaillons en anneau pour chaque rubrique, et une chouette
 /// teintée de doré. Plus d'étoiles : la sobriété fait l'élégance ici.
-class TytoDrawer extends StatelessWidget {
+class TytoDrawer extends StatefulWidget {
   final String activeId;
   final ValueChanged<String> onSelect;
   final bool isPro;
@@ -62,6 +63,60 @@ class TytoDrawer extends StatelessWidget {
     this.isPro = false,
     this.isPremium = false,
   });
+
+  @override
+  State<TytoDrawer> createState() => _TytoDrawerState();
+}
+
+class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateMixin {
+  late final AnimationController _entree;
+
+  // Raccourcis pour garder le reste du code lisible.
+  String get activeId => widget.activeId;
+  ValueChanged<String> get onSelect => widget.onSelect;
+  bool get isPro => widget.isPro;
+  bool get isPremium => widget.isPremium;
+
+  @override
+  void initState() {
+    super.initState();
+    // Le contenu se révèle progressivement pendant que le tiroir glisse :
+    // sans ça, tout apparaît d'un bloc et le mouvement paraît sec.
+    _entree = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 620),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _entree.dispose();
+    super.dispose();
+  }
+
+  /// Fait apparaître un élément en fondu, avec un léger glissement vers
+  /// la droite, à son propre moment dans la séquence.
+  Widget _apparition({required int rang, required Widget enfant}) {
+    // Chaque élément démarre un peu après le précédent.
+    final debut = (0.12 + rang * 0.055).clamp(0.0, 0.85);
+    final animation = CurvedAnimation(
+      parent: _entree,
+      curve: Interval(debut, (debut + 0.42).clamp(0.0, 1.0), curve: Curves.easeOutCubic),
+    );
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: animation.value,
+          child: Transform.translate(
+            offset: Offset(-14 * (1 - animation.value), 0),
+            child: child,
+          ),
+        );
+      },
+      child: enfant,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -122,17 +177,18 @@ class TytoDrawer extends StatelessWidget {
             SafeArea(
               child: Column(
                 children: [
-                  _buildHeader(context),
-                  _buildDividerOrne(),
+                  _apparition(rang: 0, enfant: _buildHeader(context)),
+                  _apparition(rang: 1, enfant: _buildDividerOrne()),
                   Expanded(
                     child: SingleChildScrollView(
                       child: Column(
                         children: [
                           _buildRubriques(),
-                          _buildDividerOrne(),
+                          _apparition(rang: 7, enfant: _buildDividerOrne()),
                           if (subscribed)
                             _buildAction(
                               icon: Icons.group_outlined,
+                              rang: 8,
                               label: 'Mon équipe',
                               sub: 'Inviter des soigneurs',
                               visible: isPro,
@@ -144,6 +200,7 @@ class TytoDrawer extends StatelessWidget {
                           if (subscribed)
                             _buildAction(
                               icon: Icons.settings_rounded,
+                              rang: 9,
                               label: "Gérer l'abonnement",
                               sub: 'Facturation, résiliation',
                               onTap: () async {
@@ -155,6 +212,7 @@ class TytoDrawer extends StatelessWidget {
                           else
                             _buildAction(
                               icon: Icons.star_border_rounded,
+                              rang: 9,
                               label: 'Nos offres',
                               sub: 'Découvrir Premium & Pro',
                               onTap: () {
@@ -165,6 +223,7 @@ class TytoDrawer extends StatelessWidget {
                           if (signedIn)
                             _buildAction(
                               icon: Icons.logout_rounded,
+                              rang: 10,
                               label: 'Se déconnecter',
                               sub: AuthService.email ?? 'Fermer ma session',
                               onTap: () async {
@@ -175,6 +234,7 @@ class TytoDrawer extends StatelessWidget {
                           else
                             _buildAction(
                               icon: Icons.login_rounded,
+                              rang: 10,
                               label: 'Se connecter',
                               sub: 'Retrouver mes animaux partout',
                               onTap: () {
@@ -182,7 +242,13 @@ class TytoDrawer extends StatelessWidget {
                                 Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
                               },
                             ),
-                          if (subscribed) _buildBadge(),
+                          if (subscribed) _apparition(rang: 10, enfant: _buildBadge()),
+                          _apparition(rang: 11, enfant: _buildDividerOrne()),
+                          // Google Play exige que la politique de
+                          // confidentialité soit accessible depuis
+                          // l'application, pas seulement depuis la fiche
+                          // du Play Store.
+                          _apparition(rang: 12, enfant: _buildLiensLegaux()),
                           const SizedBox(height: 14),
                         ],
                       ),
@@ -258,6 +324,36 @@ class TytoDrawer extends StatelessWidget {
     );
   }
 
+  /// Les liens légaux, en pied de menu — discrets mais toujours
+  /// accessibles, comme l'exige Google Play.
+  Widget _buildLiensLegaux() {
+    Widget lien(String texte, Future<bool> Function() action) {
+      return GestureDetector(
+        onTap: () => action(),
+        child: Text(
+          texte,
+          style: TytoText.ui(size: 10.5, color: TytoColors.brume)
+              .copyWith(decoration: TextDecoration.underline),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(27, 6, 27, 4),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 12,
+        runSpacing: 6,
+        children: [
+          lien('Confidentialité', LegalService.confidentialite),
+          lien('CGU / CGV', LegalService.conditions),
+          lien('Mentions légales', LegalService.mentionsLegales),
+          lien('Support', LegalService.support),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBadge() {
     final color = isPro ? TytoColors.vert : TytoColors.fauve;
     return Padding(
@@ -282,9 +378,12 @@ class TytoDrawer extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Column(
-        children: tytoDrawerItems.map((item) {
+        children: tytoDrawerItems.asMap().entries.map((entree) {
+          final item = entree.value;
           final lit = item.id == activeId;
-          return InkWell(
+          return _apparition(
+            rang: 2 + entree.key,
+            enfant: InkWell(
             onTap: () => onSelect(item.id),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 27, vertical: 11),
@@ -322,6 +421,7 @@ class TytoDrawer extends StatelessWidget {
                 ],
               ),
             ),
+            ),
           );
         }).toList(),
       ),
@@ -355,9 +455,12 @@ class TytoDrawer extends StatelessWidget {
     required String sub,
     required VoidCallback onTap,
     bool visible = true,
+    int rang = 8,
   }) {
     if (!visible) return const SizedBox.shrink();
-    return InkWell(
+    return _apparition(
+      rang: rang,
+      enfant: InkWell(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 27, vertical: 9),
@@ -380,6 +483,7 @@ class TytoDrawer extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
