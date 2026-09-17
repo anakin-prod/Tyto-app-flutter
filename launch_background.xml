@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- L'écran de lancement : fond uni de la marque + le logo centré.
+     Le logo est un PNG à fond transparent, donc aucun carré ne peut
+     apparaître autour, contrairement à la version PWA précédente. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launch_background_color"/>
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/splash_logo" />
+    </item>
+</layer-list>
