@@ -22,7 +22,7 @@ workflows:
       vars:
         # ⚠️ À augmenter à chaque nouvelle publication (le dernier numéro
         # déjà utilisé était 4, avec l'ancienne version du site empaqueté).
-        VERSION_CODE: 5
+        VERSION_CODE: 9
     scripts:
       - name: Récupérer les dépendances
         script: flutter pub get
