@@ -194,8 +194,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         nomsAnimaux: {for (final p in pets) p.id: p.name},
       );
 
-      // On restaure l'historique de chaque conversation — sans ça, tout
-      // disparaissait à la fermeture de l'app, contrairement au site.
+      // On charge l'historique de chaque conversation pour le panneau
+      // d'historique — mais on ne l'affiche plus directement à l'arrivée :
+      // on tombe sur l'accueil, comme demandé, et on y accède seulement
+      // en touchant le bouton historique.
       final historique = await DataService.loadConversations();
       if (!mounted) return;
       setState(() {
@@ -209,11 +211,6 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                   ))
               .toList();
         });
-        // Si la conversation actuellement ouverte est vide (premier
-        // affichage), on y verse directement son historique restauré.
-        if (_thread.isEmpty && _conversations[_cleConversation] != null) {
-          _thread.addAll(_conversations[_cleConversation]!);
-        }
       });
     } catch (_) {
       // Pas de rappels affichés si le chargement échoue : ce n'est pas
@@ -327,15 +324,20 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     }
 
     final photoEnvoyee = _photoCompressee;
+    final messageUtilisateur = _Message(
+      role: 'user',
+      content: text.isEmpty ? '(photo)' : text,
+      hasImage: photoEnvoyee != null,
+    );
     setState(() {
-      _thread.add(_Message(
-        role: 'user',
-        content: text.isEmpty ? '(photo)' : text,
-        hasImage: photoEnvoyee != null,
-      ));
+      _thread.add(messageUtilisateur);
       _sending = true;
       _photoJointe = null;
       _photoCompressee = null;
+      // Le panneau d'historique lit cette liste : on la tient à jour au
+      // fil de l'eau, plutôt que de la reconstruire depuis le fil affiché
+      // (qui, lui, redémarre vide à chaque visite).
+      (_conversations[_cleConversation] ??= []).add(messageUtilisateur);
     });
     _controller.clear();
     _scrollToBottom();
@@ -366,7 +368,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       if (result.isError) {
         _thread.add(_Message(role: 'assistant', content: _errorMessage(result.error!)));
       } else {
-        _thread.add(_Message(role: 'assistant', content: result.text ?? ''));
+        final reponse = _Message(role: 'assistant', content: result.text ?? '');
+        _thread.add(reponse);
+        (_conversations[_cleConversation] ??= []).add(reponse);
         if (result.remaining != null) _remaining = result.remaining;
         if (result.premium != null) _isPremium = result.premium!;
         ReviewService.signalerReponseReussie();
@@ -438,13 +442,16 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   /// Regroupe la conversation actuelle par jour, et ouvre le panneau
   /// pour la parcourir ou l'effacer.
   void _ouvrirHistorique() {
+    // On regroupe par jour depuis la vraie mémoire complète — le fil
+    // affiché, lui, est vide par défaut tant qu'on n'a pas choisi un jour.
+    final source = _conversations[_cleConversation] ?? [];
     final jours = <HistoryDay>[];
     DateTime? jourCourant;
     int debutJour = 0;
     String apercuJour = '';
     int compteJour = 0;
 
-    void cloreJour(int finIndex) {
+    void cloreJour() {
       if (jourCourant == null) return;
       jours.add(HistoryDay(
         jour: jourCourant!,
@@ -454,11 +461,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       ));
     }
 
-    for (var i = 0; i < _thread.length; i++) {
-      final m = _thread[i];
+    for (var i = 0; i < source.length; i++) {
+      final m = source[i];
       final j = DateTime(m.date.year, m.date.month, m.date.day);
       if (jourCourant == null || j != jourCourant) {
-        cloreJour(i - 1);
+        cloreJour();
         jourCourant = j;
         debutJour = i;
         compteJour = 0;
@@ -466,21 +473,30 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       }
       compteJour++;
     }
-    cloreJour(_thread.length - 1);
+    cloreJour();
 
     HistorySheet.afficher(
       context,
       jours: jours.reversed.toList(),
       titre: _nomAnimalActif ?? 'Général',
       onJumpTo: (index) {
-        // Une estimation raisonnable de la position : suffisante pour
-        // arriver près du bon jour, sans dépendance supplémentaire.
-        final cible = index * 92.0;
-        _scrollController.animateTo(
-          cible.clamp(0, _scrollController.position.maxScrollExtent),
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOut,
-        );
+        // On charge la conversation complète dans le fil affiché, puis
+        // on défile jusqu'au jour choisi — une estimation de position
+        // suffit, sans dépendance supplémentaire.
+        setState(() {
+          _thread
+            ..clear()
+            ..addAll(source);
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_scrollController.hasClients) return;
+          final cible = index * 92.0;
+          _scrollController.animateTo(
+            cible.clamp(0, _scrollController.position.maxScrollExtent),
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+          );
+        });
       },
       onEffacer: () async {
         final cle = _cleConversation;
@@ -663,11 +679,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   void _changerAnimal(String? petId) {
     if (petId == _activePetId) return;
     setState(() {
-      _conversations[_cleConversation] = List.of(_thread);
       _activePetId = petId;
-      _thread
-        ..clear()
-        ..addAll(_conversations[_cleConversation] ?? []);
+      // On repart sur l'accueil, pas sur l'historique restauré — celui-ci
+      // reste accessible via le bouton historique.
+      _thread.clear();
       // Le fait affiché suit l'espèce de l'animal ouvert.
       _fait = pickFact(_especeActive, _fait);
       // Les 3 puces reprennent tout de suite les questions du bon animal,
@@ -729,7 +744,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               tooltip: 'Historique des conversations',
               onPressed: _ouvrirHistorique,
             ),
-            if (_thread.isNotEmpty)
+            if (_thread.isNotEmpty || (_conversations[_cleConversation]?.isNotEmpty ?? false))
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: TytoColors.brume, size: 21),
                 tooltip: 'Nouvelle conversation',
@@ -1055,6 +1070,14 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                           ],
                         ),
                       ),
+                    ),
+                    // Un petit signe pour indiquer que l'encart se touche :
+                    // sans lui, personne ne devine qu'on peut piocher un
+                    // autre fait au toucher.
+                    const SizedBox(width: 6),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Icon(Icons.chevron_right_rounded, size: 16, color: TytoColors.fauve.withOpacity(0.7)),
                     ),
                   ],
                 ),

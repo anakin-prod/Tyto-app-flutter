@@ -118,6 +118,11 @@ class _CarnetScreenState extends State<CarnetScreen> {
     setState(() {
       _selected = p;
       _loading = true;
+      // Sans ça, la synthèse du compagnon précédent restait affichée
+      // en changeant d'animal — elle ne concerne que celui pour qui
+      // elle a été générée.
+      _synthese = null;
+      _synthLoading = false;
     });
     try {
       final events = await DataService.loadEvents(p.id);
@@ -346,16 +351,23 @@ class _CarnetScreenState extends State<CarnetScreen> {
             ],
           ),
           const SizedBox(height: 8),
-          RichText(
-            text: TextSpan(
-              style: TytoText.body(size: 15, color: TytoColors.encre).copyWith(height: 1.65),
-              children: [
-                for (var i = 0; i < morceaux.length; i++)
-                  TextSpan(
-                    text: morceaux[i],
-                    style: i.isOdd ? const TextStyle(fontWeight: FontWeight.w700) : null,
-                  ),
-              ],
+          // Une synthèse longue ne doit jamais pousser le reste de l'écran
+          // hors de l'écran : elle défile dans sa propre carte au besoin.
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.32),
+            child: SingleChildScrollView(
+              child: RichText(
+                text: TextSpan(
+                  style: TytoText.body(size: 15, color: TytoColors.encre).copyWith(height: 1.65),
+                  children: [
+                    for (var i = 0; i < morceaux.length; i++)
+                      TextSpan(
+                        text: morceaux[i],
+                        style: i.isOdd ? const TextStyle(fontWeight: FontWeight.w700) : null,
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
