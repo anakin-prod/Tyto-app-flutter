@@ -87,6 +87,18 @@ class _LostPetScreenState extends State<LostPetScreen> {
     if (_generation) return;
     setState(() => _generation = true);
 
+    // On force le décodage complet de la photo AVANT de dessiner l'affiche :
+    // sans ça, une photo un peu lourde n'avait pas fini de se charger au
+    // moment de la capture, et apparaissait vide sur l'affiche partagée.
+    if (_photo != null) {
+      try {
+        await precacheImage(FileImage(_photo!), context);
+      } catch (e) {
+        // Une photo illisible ne doit pas empêcher de générer l'affiche
+        // sans elle.
+      }
+    }
+
     final key = GlobalKey();
     late OverlayEntry entry;
     entry = OverlayEntry(

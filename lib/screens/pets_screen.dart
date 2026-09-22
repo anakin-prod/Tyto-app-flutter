@@ -272,6 +272,7 @@ class _PetFormState extends State<_PetForm> {
   late TextEditingController _allergies;
   late TextEditingController _conditions;
   String _species = 'chien';
+  String? _sex; // null, 'male' ou 'femelle' — comme sur le site
   DateTime? _birthdate;
   bool _sterilized = false;
   bool _saving = false;
@@ -285,6 +286,7 @@ class _PetFormState extends State<_PetForm> {
     _allergies = TextEditingController(text: widget.pet?.allergies ?? '');
     _conditions = TextEditingController(text: widget.pet?.conditions ?? '');
     _species = widget.pet?.species ?? 'chien';
+    _sex = widget.pet?.sex;
     _birthdate = widget.pet?.birthdate;
     _sterilized = widget.pet?.sterilized ?? false;
   }
@@ -313,6 +315,7 @@ class _PetFormState extends State<_PetForm> {
         name: _name.text,
         species: _species,
         breed: _breed.text,
+        sex: _sex,
         birthdate: _birthdate,
         weightKg: double.tryParse(_weight.text.replaceAll(',', '.')),
         sterilized: _sterilized,
@@ -406,6 +409,33 @@ class _PetFormState extends State<_PetForm> {
               Text('Race (facultatif)', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
               const SizedBox(height: 6),
               TextField(controller: _breed, style: TytoText.ui(color: TytoColors.encre), decoration: _dec('Berger australien…')),
+              const SizedBox(height: 14),
+              Text('Sexe', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  (null, '—'),
+                  ('male', 'Mâle'),
+                  ('femelle', 'Femelle'),
+                ].map((option) {
+                  final (valeur, libelle) = option;
+                  final on = _sex == valeur;
+                  return GestureDetector(
+                    onTap: () => setState(() => _sex = valeur),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: on ? TytoColors.fauve.withOpacity(0.22) : Colors.white,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: on ? TytoColors.fauve : TytoColors.encre.withOpacity(0.2)),
+                      ),
+                      child: Text(libelle, style: TytoText.ui(size: 13, color: on ? const Color(0xFF7A5A2A) : TytoColors.encre.withOpacity(0.7))),
+                    ),
+                  );
+                }).toList(),
+              ),
               const SizedBox(height: 14),
               Text('Poids en kg (facultatif)', style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6)).copyWith(letterSpacing: 1.1)),
               const SizedBox(height: 6),

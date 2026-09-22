@@ -1073,11 +1073,21 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                     ),
                     // Un petit signe pour indiquer que l'encart se touche :
                     // sans lui, personne ne devine qu'on peut piocher un
-                    // autre fait au toucher.
-                    const SizedBox(width: 6),
+                    // autre fait au toucher. Une flèche de cycle plutôt
+                    // qu'un chevron : elle dit clairement "touche pour
+                    // changer", pas "il y a plus de contenu".
+                    const SizedBox(width: 8),
                     Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Icon(Icons.chevron_right_rounded, size: 16, color: TytoColors.fauve.withOpacity(0.7)),
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.autorenew_rounded, size: 14, color: TytoColors.fauve.withOpacity(0.85)),
+                          const SizedBox(width: 3),
+                          Text('Suivant',
+                              style: TytoText.ui(size: 10, weight: FontWeight.w600, color: TytoColors.fauve.withOpacity(0.85))),
+                        ],
+                      ),
                     ),
                   ],
                 ),
