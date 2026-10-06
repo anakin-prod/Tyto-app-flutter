@@ -22,7 +22,7 @@ workflows:
       vars:
         # ⚠️ À augmenter à chaque nouvelle publication : Google refuse un numéro
         # déjà utilisé. Un « trou » dans la numérotation ne pose aucun problème.
-        VERSION_CODE: 9
+        VERSION_CODE: 11
         # Le nom affiché aux utilisateurs. 1.1.0 = nouvelles fonctions ;
         # 1.0.2 serait de simples corrections. Seul VERSION_CODE compte pour Google.
         VERSION_NAME: 1.1.0
