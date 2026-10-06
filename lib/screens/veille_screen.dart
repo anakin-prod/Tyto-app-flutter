@@ -114,6 +114,7 @@ class _VeilleScreenState extends State<VeilleScreen> {
         return 'rappel de vaccin';
       case 'vermifuge':
         return 'vermifuge à renouveler';
+      case 'veto':
       case 'visite':
         return 'visite à prévoir';
       case 'traitement':

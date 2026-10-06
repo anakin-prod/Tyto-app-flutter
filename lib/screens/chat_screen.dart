@@ -76,6 +76,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   bool _peutRedescendre = false;
   bool _etaitConnecte = false; // pour repérer le passage « compte → visiteur »
   bool _justPaid = false; // vient de passer en Premium/Pro, à l'instant
+  String? _profilUserId; // le compte dont le statut Premium/Pro est actuellement affiché
   File? _photoJointe;
   PhotoCompressee? _photoCompressee;
   bool _compressionEnCours = false;
@@ -137,6 +138,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           _isPremium = false;
           _isPro = false;
           _remaining = null;
+          _justPaid = false;
+          _profilUserId = null;
         });
       }
       _etaitConnecte = connecte;
@@ -172,28 +175,33 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     return null;
   }
 
-  Future<void> _loadProfile() async {
+  Future<void> _loadProfile({bool detecterAchat = false}) async {
     final token = AuthService.currentSession?.accessToken;
     if (token == null) return;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
     final profile = await UserService.fetchMe(token);
     if (!mounted) return;
     final etaitDejaAbonne = _isPremium || _isPro;
+    // Un achat = le MÊME compte qui passe de « pas abonné » à « abonné » alors
+    // qu'on revient du navigateur. Se connecter à un compte déjà abonné change
+    // de compte : ce n'est pas un achat, et ne doit pas afficher « Bienvenue ».
+    final memeCompte = _profilUserId != null && _profilUserId == userId;
     setState(() {
       _isPremium = profile.premium;
       _isPro = profile.pro;
       _remaining = profile.remaining;
-      // On vient de passer en Premium/Pro à l'instant (retour du
-      // paiement Stripe dans le navigateur) : le même message que le
-      // site s'affiche.
-      if (!etaitDejaAbonne && (_isPremium || _isPro)) _justPaid = true;
+      if (detecterAchat && memeCompte && !etaitDejaAbonne && (_isPremium || _isPro)) {
+        _justPaid = true;
+      }
     });
+    _profilUserId = userId;
   }
 
   /// Après un paiement, l'utilisateur revient du navigateur : on
   /// recharge son profil pour détecter le passage en Premium/Pro.
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _loadProfile();
+    if (state == AppLifecycleState.resumed) _loadProfile(detecterAchat: true);
   }
 
   /// Les compagnons et les rappels à venir, affichés au-dessus du chat
@@ -602,7 +610,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 style: TytoText.ui(size: 13, color: TytoColors.lune).copyWith(height: 1.4),
                 children: [
                   TextSpan(
-                    text: _libelleRappel(ev.type),
+                    text: ev.libelle,
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   TextSpan(text: ' pour ${nom.isEmpty ? "ton compagnon" : nom} — $quand'),

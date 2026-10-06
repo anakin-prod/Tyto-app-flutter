@@ -85,8 +85,8 @@ class NotificationService {
       final nom = nomsAnimaux[ev.petId];
       final titre = nom != null ? 'Tyto — $nom' : 'Tyto';
       final texte = nom != null
-          ? "N'oublie pas ${_libelle(ev.type)} pour $nom aujourd'hui."
-          : "N'oublie pas ${_libelle(ev.type)} aujourd'hui.";
+          ? "${ev.libelle} est prévu aujourd'hui pour $nom."
+          : "${ev.libelle} est prévu aujourd'hui.";
 
       try {
         await _plugin.zonedSchedule(

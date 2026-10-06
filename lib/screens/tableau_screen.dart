@@ -119,7 +119,7 @@ class _TableauScreenState extends State<TableauScreen> {
                           '${e.nextDue!.day.toString().padLeft(2, '0')}/${e.nextDue!.month.toString().padLeft(2, '0')}/${e.nextDue!.year}';
                       return TytoTile(
                         icon: Icons.notifications_active_rounded,
-                        title: _typeLabel(e.type),
+                        title: e.libelle,
                         subtitle: petName != null ? '$petName · $date' : date,
                         trailing: label,
                         accent: soon ? TytoColors.urgence : TytoColors.fauve,

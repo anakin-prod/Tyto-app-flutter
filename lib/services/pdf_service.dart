@@ -124,7 +124,7 @@ class PdfService {
                       .toList(),
                 ),
                 ...historique.map((ev) {
-                  final evenement = _typeLabel(ev.type) + (ev.valueNum != null ? ' — ${ev.valueNum} kg' : '');
+                  final evenement = ev.libelle + (ev.valueNum != null ? ' — ${ev.valueNum} kg' : '');
                   final echeance = ev.nextDue != null ? 'rappel le ${_fmt(ev.nextDue!)}' : '';
                   final cellules = [_fmt(ev.eventDate), evenement, echeance, ev.notes ?? ''];
                   return pw.TableRow(

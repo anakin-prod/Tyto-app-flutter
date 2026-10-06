@@ -18,7 +18,8 @@ import '../widgets/tyto_drawer.dart';
 import '../widgets/drawer_navigation.dart';
 import 'prescription_screen.dart';
 
-const _eventTypes = ['vaccin', 'poids', 'vermifuge', 'visite', 'traitement'];
+// Les mêmes types que sur le site (EVENT_TYPES).
+const _eventTypes = ['vaccin', 'vermifuge', 'antiparasitaire', 'veto', 'poids', 'observation', 'traitement', 'autre'];
 
 IconData _typeIcon(String t) {
   switch (t) {
@@ -28,27 +29,19 @@ IconData _typeIcon(String t) {
       return Icons.monitor_weight_rounded;
     case 'vermifuge':
       return Icons.medication_rounded;
+    case 'veto':
     case 'visite':
       return Icons.local_hospital_rounded;
+    case 'antiparasitaire':
+      return Icons.bug_report_rounded;
+    case 'observation':
+      return Icons.edit_note_rounded;
     default:
       return Icons.event_note_rounded;
   }
 }
 
-String _typeLabel(String t) {
-  switch (t) {
-    case 'vaccin':
-      return 'Vaccin';
-    case 'poids':
-      return 'Pesée';
-    case 'vermifuge':
-      return 'Vermifuge';
-    case 'visite':
-      return 'Visite vétérinaire';
-    default:
-      return 'Traitement';
-  }
-}
+String _typeLabel(String t) => libelleDuType(t);
 
 String _fmt(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
@@ -72,7 +65,15 @@ class _CarnetScreenState extends State<CarnetScreen> {
   bool _isPremium = false;
   bool _synthLoading = false;
   bool _exportLoading = false;
+  final _obsController = TextEditingController();
+  bool _obsEnvoi = false;
   VetReport? _synthese;
+
+  @override
+  void dispose() {
+    _obsController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -322,6 +323,89 @@ class _CarnetScreenState extends State<CarnetScreen> {
     );
   }
 
+  /// Noter une observation du quotidien en quelques mots (appétit, humeur,
+  /// démarche…), sans passer par le formulaire complet — comme sur le site.
+  /// Tyto relit ces notes à chaque question et repère les tendances.
+  Future<void> _noterObservation() async {
+    final texte = _obsController.text.trim();
+    if (texte.isEmpty || _selected == null || _obsEnvoi) return;
+    setState(() => _obsEnvoi = true);
+    try {
+      await DataService.saveEvent(
+        petId: _selected!.id,
+        type: 'observation',
+        eventDate: DateTime.now(),
+        notes: texte,
+        label: 'Observation',
+      );
+      _obsController.clear();
+      final events = await DataService.loadEvents(_selected!.id);
+      if (!mounted) return;
+      setState(() => _events = events);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("La note n'a pas pu être enregistrée, réessaie.")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _obsEnvoi = false);
+    }
+  }
+
+  Widget _carteObservation() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _obsController,
+              enabled: !_obsEnvoi,
+              style: TytoText.ui(color: TytoColors.lune),
+              textCapitalization: TextCapitalization.sentences,
+              onSubmitted: (_) => _noterObservation(),
+              decoration: InputDecoration(
+                hintText: 'Noter une observation sur ${_selected?.name ?? ''}…',
+                hintStyle: TytoText.ui(size: 13.5, color: TytoColors.brume),
+                filled: true,
+                fillColor: TytoColors.nuit2,
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          // La dictée est une fonction Pro, comme partout dans l'app.
+          if (_isPro) ...[
+            const SizedBox(width: 6),
+            VoiceButton(
+              size: 38,
+              title: "Dicter l'observation",
+              onText: (t) {
+                _obsController.text = t;
+                _obsController.selection = TextSelection.fromPosition(TextPosition(offset: t.length));
+              },
+            ),
+          ],
+          const SizedBox(width: 6),
+          ElevatedButton(
+            onPressed: _obsEnvoi ? null : _noterObservation,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: TytoColors.fauve,
+              disabledBackgroundColor: TytoColors.fauve.withOpacity(0.4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _obsEnvoi
+                ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.nuit))
+                : Text('Noter', style: TytoText.ui(size: 13.5, weight: FontWeight.w700, color: TytoColors.nuit)),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// La synthèse affichée sur le papier ivoire, comme sur le site.
   Widget _carteSynthese() {
     final morceaux = _synthese!.content.split('**');
@@ -378,6 +462,7 @@ class _CarnetScreenState extends State<CarnetScreen> {
   @override
   Widget build(BuildContext context) {
     final title = _selected == null ? 'Carnet de santé' : 'Carnet · ${_selected!.name}';
+    final clavierOuvert = MediaQuery.of(context).viewInsets.bottom > 0;
     return Scaffold(
       backgroundColor: Colors.transparent,
       drawer: TytoDrawer(
@@ -409,9 +494,12 @@ class _CarnetScreenState extends State<CarnetScreen> {
                   : Column(
                       children: [
                         const SizedBox(height: 8),
-                        _petSelector(),
-                        _actionsPro(),
-                        if (_synthese != null) _carteSynthese(),
+                        // Clavier ouvert : on masque les blocs du haut pour que la
+                        // saisie reste visible sans déborder (barre jaune et noire).
+                        if (!clavierOuvert) _petSelector(),
+                        if (!clavierOuvert) _actionsPro(),
+                        if (!clavierOuvert && _synthese != null) _carteSynthese(),
+                        _carteObservation(),
                         const SizedBox(height: 8),
                         Expanded(
                           child: _events.isEmpty
@@ -435,7 +523,7 @@ class _CarnetScreenState extends State<CarnetScreen> {
                                       ];
                                       return TytoTile(
                                         icon: _typeIcon(e.type),
-                                        title: _typeLabel(e.type),
+                                        title: e.libelle,
                                         subtitle: parts.join(' · '),
                                         trailing: e.valueNum != null ? '${e.valueNum} kg' : null,
                                       );
@@ -485,6 +573,7 @@ class _EventFormState extends State<_EventForm> {
         nextDue: _nextDue,
         valueNum: double.tryParse(_value.text.replaceAll(',', '.')),
         notes: _notes.text,
+        label: libelleDuType(_type),
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {

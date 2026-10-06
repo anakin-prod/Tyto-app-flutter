@@ -86,7 +86,6 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
           parts.add('pendant ${l.durationDays} jour${l.durationDays! > 1 ? 's' : ''}');
         }
         if (l.notes != null && l.notes!.trim().isNotEmpty) parts.add(l.notes!.trim());
-        parts.add('(ordonnance photographiée, à vérifier)');
 
         final titre = l.medication.trim() + (l.dose != null && l.dose!.trim().isNotEmpty ? ' — ${l.dose!.trim()}' : '');
 
@@ -94,7 +93,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
           petId: widget.pet.id,
           type: 'traitement',
           eventDate: DateTime.now(),
-          notes: '$titre · ${parts.join(' · ')}',
+          label: titre,
+          notes: '${parts.join(' · ')} (ordonnance photographiée, à vérifier)',
         );
       }
       if (!mounted) return;

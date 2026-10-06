@@ -83,6 +83,7 @@ class DataService {
     DateTime? nextDue,
     double? valueNum,
     String? notes,
+    String? label,
   }) async {
     final userId = _db.auth.currentUser?.id;
     if (userId == null) return;
@@ -91,6 +92,10 @@ class DataService {
       'user_id': userId,
       'pet_id': petId,
       'type': type,
+      // Le libellé est obligatoire dans la base : on l'envoie toujours, comme
+      // le site (celui saisi, sinon celui du type).
+      'label': (label?.trim().isNotEmpty ?? false) ? label!.trim() : libelleDuType(type),
+      'created_by_email': _db.auth.currentUser?.email,
       'event_date': eventDate.toIso8601String().substring(0, 10),
       'next_due': nextDue?.toIso8601String().substring(0, 10),
       'value_num': valueNum,
@@ -133,6 +138,7 @@ class DataService {
       nextDue: row['next_due'] != null ? DateTime.tryParse(row['next_due'].toString()) : null,
       valueNum: row['value_num'] != null ? (row['value_num'] as num).toDouble() : null,
       notes: row['notes'] as String?,
+      label: row['label'] as String?,
     );
   }
 
