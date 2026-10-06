@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../services/platform_service.dart';
 import '../theme/typography.dart';
 import '../services/billing_service.dart';
 
@@ -82,6 +83,8 @@ class ProUpsell extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
+              // Sur iOS, aucun bouton vers les offres du site (règle 3.1.1 d'Apple).
+              if (!PlatformInfo.estIOS) ...[
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -98,11 +101,12 @@ class ProUpsell extends StatelessWidget {
                       style: TytoText.ui(size: 15, weight: FontWeight.w700, color: const Color(0xFF0F2A24))),
                 ),
               ),
+              ],
               const SizedBox(height: 6),
               Center(
                 child: TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text('Plus tard',
+                  child: Text(PlatformInfo.estIOS ? 'Fermer' : 'Plus tard',
                       style: TytoText.ui(size: 13.5, color: TytoColors.encre.withOpacity(0.65))),
                 ),
               ),

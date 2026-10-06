@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/colors.dart';
+import '../services/platform_service.dart';
 import '../theme/background.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
@@ -196,6 +197,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                   ),
                 ),
+                // Sur iOS, Apple exigerait « Se connecter avec Apple » dès qu'on
+                // propose Google : on ne propose donc que le lien par email.
+                if (!PlatformInfo.estIOS) ...[
                 const SizedBox(height: 18),
                 Row(children: [
                   Expanded(child: Divider(color: TytoColors.brume.withOpacity(0.3))),
@@ -219,6 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                ],
                 // Le lien reste tout en bas : il ne sert qu'au compte
                 // d'examen de Google, pas aux vrais utilisateurs.
                 const SizedBox(height: 10),

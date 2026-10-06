@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import '../services/platform_service.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../services/billing_service.dart';
@@ -198,7 +199,9 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                                 Navigator.push(context, MaterialPageRoute(builder: (_) => const TeamScreen()));
                               },
                             ),
-                          if (subscribed)
+                          // Pas de lien vers les offres ni vers la facturation Stripe sur
+                          // iOS : Apple y verrait un paiement hors de l'App Store.
+                          if (!PlatformInfo.estIOS && subscribed)
                             _buildAction(
                               icon: Icons.settings_rounded,
                               rang: 9,
@@ -210,7 +213,7 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                                 if (token != null) await BillingService.openPortal(token);
                               },
                             )
-                          else
+                          else if (!PlatformInfo.estIOS)
                             _buildAction(
                               icon: Icons.star_border_rounded,
                               rang: 9,

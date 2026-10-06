@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/photo_service.dart';
 import '../theme/colors.dart';
+import '../services/platform_service.dart';
 import '../theme/background.dart';
 import '../theme/typography.dart';
 import '../widgets/tyto_drawer.dart';
@@ -413,9 +414,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   String _errorMessage(String error) {
     switch (error) {
       case 'quota':
-        return "Tu as atteint la limite de questions gratuites pour aujourd'hui. Passe en Premium pour continuer sans limite.";
+        return PlatformInfo.estIOS
+            ? "Tu as atteint la limite de questions gratuites pour aujourd'hui. Reviens demain pour continuer."
+            : "Tu as atteint la limite de questions gratuites pour aujourd'hui. Passe en Premium pour continuer sans limite.";
       case 'premium_photo':
-        return "L'analyse de photo est réservée au plan Premium. Passe en Premium pour que Tyto puisse regarder tes photos.";
+        return PlatformInfo.estIOS
+            ? "L'analyse de photo est réservée aux comptes Premium."
+            : "L'analyse de photo est réservée au plan Premium. Passe en Premium pour que Tyto puisse regarder tes photos.";
       case 'auth':
         return "Ta session a expiré, reconnecte-toi.";
       case 'network':

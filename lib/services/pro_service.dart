@@ -131,6 +131,8 @@ class ProService {
         return "Tu ne peux pas t'inviter toi-même.";
       case 'not_pro':
         return "Les équipes sont réservées au plan Pro.";
+      case 'seats_apple_full':
+        return 'Ton abonnement inclut 2 places (toi compris) : elles sont toutes prises ou réservées.';
       default:
         return "L'invitation n'a pas abouti. Réessaie.";
     }
