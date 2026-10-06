@@ -4,6 +4,7 @@ import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../services/billing_service.dart';
 import '../services/legal_service.dart';
+import 'delete_account_dialog.dart';
 import '../screens/login_screen.dart';
 import '../screens/team_screen.dart';
 import 'tyto_icons.dart';
@@ -240,6 +241,19 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                               onTap: () {
                                 Navigator.pop(context);
                                 Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                              },
+                            ),
+                          // Exigé par Apple et Google : un compte créé dans l'app doit
+                          // pouvoir être supprimé depuis l'app.
+                          if (signedIn)
+                            _buildAction(
+                              icon: Icons.delete_outline_rounded,
+                              rang: 11,
+                              label: 'Supprimer mon compte',
+                              sub: 'Effacer définitivement mes données',
+                              onTap: () {
+                                Navigator.pop(context);
+                                DeleteAccountDialog.afficher(context);
                               },
                             ),
                           if (subscribed) _apparition(rang: 10, enfant: _buildBadge()),

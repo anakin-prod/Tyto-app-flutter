@@ -73,6 +73,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   late final AnimationController _pulse;
   StreamSubscription<AuthState>? _authSub;
   bool _peutRedescendre = false;
+  bool _etaitConnecte = false; // pour repérer le passage « compte → visiteur »
   bool _justPaid = false; // vient de passer en Premium/Pro, à l'instant
   File? _photoJointe;
   PhotoCompressee? _photoCompressee;
@@ -115,8 +116,29 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     _chargerAnimaux();
     // Quand l'utilisateur se connecte (ou se déconnecte), son plan change :
     // sans ça, le badge resterait figé sur l'ancien statut.
+    _etaitConnecte = AuthService.isSignedIn;
     _authSub = AuthService.onAuthStateChange.listen((_) {
       if (!mounted) return;
+      final connecte = AuthService.isSignedIn;
+      if (_etaitConnecte && !connecte) {
+        // On vient de quitter un vrai compte (déconnexion ou suppression) :
+        // on efface tout ce qui venait de lui — animaux, conversations,
+        // statut Premium/Pro et rappels programmés sur le téléphone. On ne
+        // le fait QUE lors de ce passage : un simple renouvellement de
+        // session d'un visiteur ne doit jamais vider sa conversation.
+        NotificationService.annulerTout();
+        setState(() {
+          _pets = [];
+          _rappels = [];
+          _conversations.clear();
+          _thread.clear();
+          _activePetId = null;
+          _isPremium = false;
+          _isPro = false;
+          _remaining = null;
+        });
+      }
+      _etaitConnecte = connecte;
       _loadProfile();
       // Sans ça, se connecter ne rechargeait pas les animaux : ils ne
       // réapparaissaient qu'en revenant d'un autre écran par hasard.

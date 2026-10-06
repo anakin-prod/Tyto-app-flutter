@@ -44,6 +44,14 @@ class NotificationService {
     }
   }
 
+  /// Annule tous les rappels programmés — utilisé quand on quitte un compte
+  /// (déconnexion ou suppression) : sans ça, le téléphone continuerait à
+  /// rappeler des vaccins pour des animaux qui ne sont plus là.
+  static Future<void> annulerTout() async {
+    if (!_pret) return;
+    await _plugin.cancelAll();
+  }
+
   /// Reprogramme tous les rappels d'un coup : on efface les anciens puis
   /// on recrée depuis les données actuelles — plus simple et plus sûr
   /// que d'essayer de ne mettre à jour que ce qui a changé.
