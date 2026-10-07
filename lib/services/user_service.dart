@@ -16,6 +16,11 @@ class UserProfile {
 class UserService {
   static const _baseUrl = 'https://tytoai.app';
 
+  /// D'où vient le plan de l'utilisateur : « stripe » (site, Android),
+  /// « apple » (App Store) ou null (gratuit, ou donné à la main). Sert à
+  /// n'afficher « Gérer l'abonnement » que là où il mène au bon endroit.
+  static String? planSource;
+
   static Future<UserProfile> fetchMe(String accessToken) async {
     try {
       final res = await http.get(
@@ -28,6 +33,7 @@ class UserService {
       // s'applique réellement (il tient compte d'un accès Pro via une
       // équipe), alors que "plan" n'est que l'abonnement payé en propre.
       final effectif = (data['effectivePlan'] ?? data['plan'] ?? 'free').toString();
+      planSource = data['planSource']?.toString();
       final pro = data['pro'] == true || effectif == 'pro';
       return UserProfile(
         premium: pro || data['premium'] == true || effectif == 'premium',

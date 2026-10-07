@@ -22,7 +22,7 @@ workflows:
       vars:
         # ⚠️ À augmenter à chaque nouvelle publication : Google refuse un numéro
         # déjà utilisé. Un « trou » dans la numérotation ne pose aucun problème.
-        VERSION_CODE: 11
+        VERSION_CODE: 12
         # Le nom affiché aux utilisateurs. 1.1.0 = nouvelles fonctions ;
         # 1.0.2 serait de simples corrections. Seul VERSION_CODE compte pour Google.
         VERSION_NAME: 1.1.0
@@ -42,3 +42,56 @@ workflows:
           flutter build appbundle --release --build-name=$VERSION_NAME --build-number=$VERSION_CODE
     artifacts:
       - build/app/outputs/bundle/release/*.aab
+
+  # ============================================================
+  # iPhone — compile l'app, la signe et l'envoie à TestFlight.
+  #
+  # À PRÉPARER AVANT DE LE LANCER (une seule fois, je te guide) :
+  #   1. Un compte Apple Developer actif
+  #   2. Une intégration Codemagic « tyto_apple » (clé App Store Connect)
+  #   3. Un certificat de distribution et un profil App Store pour
+  #      l'identifiant ci-dessous, dans Codemagic > Code signing identities
+  #   4. (plus tard, pour les abonnements) la variable secrète RC_IOS_KEY :
+  #      la clé publique RevenueCat « appl_… ». Sans elle, l'app est
+  #      compilée sans aucun bouton d'achat.
+  # ============================================================
+  tyto-ios-testflight:
+    name: Tyto — iPhone (TestFlight)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: tyto_apple
+    environment:
+      flutter: stable
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: app.tytoai.tyto
+      vars:
+        IOS_BUNDLE_ID: app.tytoai.tyto
+        VERSION_NAME_IOS: 1.0.0
+    scripts:
+      - name: Préparer le projet iOS
+        script: |
+          python3 ios_setup/prepare_ios.py
+      - name: Régler la signature du projet
+        script: |
+          xcode-project use-profiles
+      - name: Paquets Flutter
+        script: |
+          flutter pub get
+      - name: Pods
+        script: |
+          find . -name "Podfile" -execdir pod install \;
+      - name: Compiler l'app iPhone
+        script: |
+          flutter build ipa --release \
+            --build-name=$VERSION_NAME_IOS \
+            --build-number=$PROJECT_BUILD_NUMBER \
+            --dart-define=RC_IOS_KEY=$RC_IOS_KEY \
+            --export-options-plist=/Users/builder/export_options.plist
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration

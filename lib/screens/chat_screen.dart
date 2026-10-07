@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' show Random;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,6 +20,8 @@ import '../models/pet.dart';
 import '../models/health_event.dart';
 import '../services/data_service.dart';
 import '../data/facts.dart';
+import '../data/seasonal.dart';
+import '../services/achats_service.dart';
 import 'emergency_sheet.dart';
 import '../services/auth_service.dart';
 import '../services/chat_service.dart';
@@ -76,6 +79,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   bool _peutRedescendre = false;
   bool _etaitConnecte = false; // pour repérer le passage « compte → visiteur »
   bool _justPaid = false; // vient de passer en Premium/Pro, à l'instant
+  bool _faitEstSaison = false; // l'encart affiche un conseil de saison plutôt qu'un fait
   String? _profilUserId; // le compte dont le statut Premium/Pro est actuellement affiché
   File? _photoJointe;
   PhotoCompressee? _photoCompressee;
@@ -106,6 +110,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Les achats intégrés Apple (iOS seulement ; sans effet sur Android).
+    AchatsService.demarrer();
+    AchatsService.achatReussi.addListener(_apresAchat);
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2600), // même durée que sosPulse
@@ -142,6 +149,14 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           _profilUserId = null;
         });
       }
+      // Les achats Apple suivent le compte : l'identifiant utilisé chez RevenueCat
+      // est celui de Supabase, comme côté serveur.
+      if (connecte && !_etaitConnecte) {
+        final id = Supabase.instance.client.auth.currentUser?.id;
+        if (id != null) AchatsService.connecter(id);
+      } else if (!connecte && _etaitConnecte) {
+        AchatsService.deconnecter();
+      }
       _etaitConnecte = connecte;
       _loadProfile();
       // Sans ça, se connecter ne rechargeait pas les animaux : ils ne
@@ -161,10 +176,38 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     });
   }
 
+  /// Après un achat intégré réussi : on relit le statut tout de suite, ce qui
+  /// affiche le message de bienvenue (même compte, pas abonné puis abonné).
+  void _apresAchat() => _loadProfile(detecterAchat: true);
+
   /// Pioche un autre fait — de l'espèce de l'animal ouvert si on en a
   /// choisi un, sinon dans tous les animaux mélangés (comme le site).
   void _nextFact() {
-    setState(() => _fait = pickFact(_especeActive, _fait));
+    setState(_tirerEntree);
+  }
+
+  /// Les espèces concernées par un conseil de saison : celle de l'animal
+  /// ouvert, ou toutes celles de la maison dans la conversation générale.
+  Set<String> get _especesConcernees {
+    final active = _especeActive;
+    if (active != null) return {active};
+    return {for (final p in _pets) p.species};
+  }
+
+  /// Comme sur le site : tantôt un fait, tantôt un conseil de saison (s'il y
+  /// en a un en ce moment), jamais deux conseils de saison d'affilée.
+  void _tirerEntree() {
+    final dernierFait = _faitEstSaison ? null : _fait;
+    final conseil = _faitEstSaison
+        ? null
+        : conseilDeSaison(especes: _especesConcernees, maintenant: DateTime.now());
+    if (conseil != null && Random().nextBool()) {
+      _fait = conseil;
+      _faitEstSaison = true;
+    } else {
+      _fait = pickFact(_especeActive, dernierFait);
+      _faitEstSaison = false;
+    }
   }
 
   String? get _especeActive {
@@ -223,6 +266,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       await NotificationService.reprogrammer(
         rappels: rappels,
         nomsAnimaux: {for (final p in pets) p.id: p.name},
+        animaux: [for (final p in pets) {'nom': p.name, 'espece': p.species}],
       );
 
       // On charge l'historique de chaque conversation pour le panneau
@@ -273,6 +317,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    AchatsService.achatReussi.removeListener(_apresAchat);
     _authSub?.cancel();
     _pulse.dispose();
     for (final t in _chipTimers) {
@@ -719,7 +764,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       // reste accessible via le bouton historique.
       _thread.clear();
       // Le fait affiché suit l'espèce de l'animal ouvert.
-      _fait = pickFact(_especeActive, _fait);
+      _tirerEntree();
       // Les 3 puces reprennent tout de suite les questions du bon animal,
       // sans attendre leur rotation naturelle.
       _chipIdx[0] = 0;
@@ -1094,7 +1139,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                               .copyWith(fontStyle: FontStyle.italic, height: 1.45),
                           children: [
                             TextSpan(
-                              text: 'Le savais-tu ? ',
+                              text: _faitEstSaison ? 'Conseil de saison : ' : 'Le savais-tu ? ',
                               style: TytoText.ui(
                                       size: 12.5,
                                       weight: FontWeight.w700,

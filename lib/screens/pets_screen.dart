@@ -12,9 +12,12 @@ import '../widgets/tyto_drawer.dart';
 import '../widgets/drawer_navigation.dart';
 import '../services/user_service.dart';
 import 'behaviors_sheet.dart';
+import 'breed_sheet.dart';
+import '../data/breeds.dart';
 import 'lost_pet_screen.dart';
 
-const _speciesOptions = ['chien', 'chat', 'lapin', 'oiseau', 'rongeur', 'reptile', 'autre'];
+// Les mêmes espèces que sur le site.
+const _speciesOptions = ['chien', 'chat', 'lapin', 'oiseau', 'rongeur', 'reptile', 'poisson', 'cheval', 'autre'];
 
 class PetsScreen extends StatefulWidget {
   const PetsScreen({super.key});
@@ -215,6 +218,25 @@ class _PetsScreenState extends State<PetsScreen> {
                                             ],
                                           ),
                                         ),
+
+                                        // Seulement si la race est reconnue dans ce que tu as saisi.
+                                        if (racePourAnimal(p.species, p.breed) != null)
+                                          GestureDetector(
+                                            onTap: () => BreedSheet.afficher(context, p),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(Icons.health_and_safety_outlined,
+                                                    size: 11, color: TytoColors.encre.withOpacity(0.55)),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  'À surveiller pour sa race',
+                                                  style: TytoText.ui(size: 11.5, color: TytoColors.encre.withOpacity(0.55))
+                                                      .copyWith(decoration: TextDecoration.underline, decorationStyle: TextDecorationStyle.dotted),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
 
                                         GestureDetector(
                                           onTap: () => Navigator.push(

@@ -1,47 +1,59 @@
+import 'dart:convert';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tzdata;
+import '../data/seasonal.dart';
 import '../models/health_event.dart';
 
 /// Rappelle un vaccin ou un vermifuge directement sur le téléphone, le
-/// jour même — même app fermée. C'est ce qu'un site ne peut pas faire
-/// correctement, et l'un des vrais arguments d'avoir l'app plutôt que
-/// seulement le site.
+/// jour même — même app fermée. Prévient aussi, au bon moment de l'année,
+/// des risques de saison : épillets, chaleur, froid, feux d'artifice…
+/// C'est ce qu'un site ne peut pas faire correctement, et l'un des vrais
+/// arguments d'avoir l'app plutôt que seulement le site.
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _pret = false;
 
+  /// Les rappels du carnet prennent les numéros 0, 1, 2… ; les alertes de
+  /// saison commencent à 5000 pour ne jamais s'y mélanger.
+  static const _idSaison = 5000;
+  static const _cleAnimaux = 'saison_animaux';
+
   static Future<void> initialiser() async {
     if (_pret) return;
     tzdata.initializeTimeZones();
+    // Sans fuseau précisé, « 9 h » voulait dire 9 h UTC, soit 10 h ou 11 h en
+    // France. Tyto s'adresse à un public francophone : on se cale sur Paris.
+    try {
+      tz.setLocalLocation(tz.getLocation('Europe/Paris'));
+    } catch (e) {
+      // Si le fuseau est introuvable, on garde le comportement précédent.
+    }
 
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const settings = InitializationSettings(android: androidInit);
+    // Sur iPhone, on ne demande rien au tout premier lancement : la
+    // permission est demandée plus tard, au bon moment (demanderPermission).
+    const iosInit = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    const settings = InitializationSettings(android: androidInit, iOS: iosInit);
     await _plugin.initialize(settings);
     _pret = true;
   }
 
-  /// Demande la permission — obligatoire à partir d'Android 13. Ne fait
-  /// rien sur les versions plus anciennes, où c'est déjà accordé.
+  /// Demande la permission — obligatoire à partir d'Android 13, et toujours
+  /// sur iPhone. Ne fait rien là où c'est déjà accordé, ni sur l'autre
+  /// plateforme (chaque ligne ne s'applique qu'à la sienne).
   static Future<void> demanderPermission() async {
     await _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
-  }
-
-  static String _libelle(String type) {
-    switch (type) {
-      case 'vaccin':
-        return 'un rappel de vaccin';
-      case 'vermifuge':
-        return 'un vermifuge';
-      case 'visite':
-        return 'une visite vétérinaire';
-      case 'traitement':
-        return 'un traitement';
-      default:
-        return 'un rappel';
-    }
+    await _plugin
+        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   /// Annule tous les rappels programmés — utilisé quand on quitte un compte
@@ -50,6 +62,9 @@ class NotificationService {
   static Future<void> annulerTout() async {
     if (!_pret) return;
     await _plugin.cancelAll();
+    // On oublie aussi la liste des animaux gardée pour les alertes de saison.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_cleAnimaux);
   }
 
   /// Reprogramme tous les rappels d'un coup : on efface les anciens puis
@@ -58,6 +73,7 @@ class NotificationService {
   static Future<void> reprogrammer({
     required List<HealthEvent> rappels,
     required Map<String, String> nomsAnimaux,
+    List<Map<String, String>> animaux = const [],
   }) async {
     if (!_pret) return;
     await _plugin.cancelAll();
@@ -78,8 +94,7 @@ class NotificationService {
     for (final ev in rappels) {
       if (ev.nextDue == null) continue;
       // On prévient à 9h le jour du rappel.
-      var quand = tz.TZDateTime(
-        tz.local, ev.nextDue!.year, ev.nextDue!.month, ev.nextDue!.day, 9);
+      final quand = tz.TZDateTime(tz.local, ev.nextDue!.year, ev.nextDue!.month, ev.nextDue!.day, 9);
       if (quand.isBefore(maintenant)) continue; // déjà passé, inutile
 
       final nom = nomsAnimaux[ev.petId];
@@ -102,5 +117,138 @@ class NotificationService {
         // Une programmation ratée ne doit jamais bloquer les autres.
       }
     }
+
+    // Les alertes de saison, selon les espèces des animaux. On garde leur
+    // liste en mémoire pour pouvoir les reprogrammer sans recharger les
+    // données (quand on active ou désactive les alertes depuis le menu).
+    await _memoriserAnimaux(animaux);
+    await _programmerSaison(animaux);
+  }
+
+  // ---------- Alertes de saison ----------
+
+  static Future<void> _memoriserAnimaux(List<Map<String, String>> animaux) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_cleAnimaux, jsonEncode(animaux));
+  }
+
+  static Future<List<Map<String, String>>> _lireAnimaux() async {
+    final prefs = await SharedPreferences.getInstance();
+    final brut = prefs.getString(_cleAnimaux);
+    if (brut == null) return [];
+    try {
+      return (jsonDecode(brut) as List)
+          .map((e) => <String, String>{
+                'nom': (e['nom'] ?? '').toString(),
+                'espece': (e['espece'] ?? '').toString(),
+              })
+          .toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// « Max », « Max et Luna », « Max, Luna et 2 autres ».
+  static String _noms(List<String> noms) {
+    if (noms.length <= 2) return noms.join(' et ');
+    final reste = noms.length - 2;
+    return '${noms.take(2).join(', ')} et $reste autre${reste > 1 ? 's' : ''}';
+  }
+
+  /// La prochaine fois que la date de l'alerte arrive : cette année si elle
+  /// n'est pas encore passée, sinon l'an prochain. Jamais dans le passé.
+  static tz.TZDateTime _prochaine(AlerteSaison a, tz.TZDateTime maintenant, int decalageMinutes) {
+    var quand = tz.TZDateTime(tz.local, maintenant.year, a.notifMois, a.notifJour, a.notifHeure, a.notifMinute)
+        .add(Duration(minutes: decalageMinutes));
+    if (!quand.isAfter(maintenant)) {
+      quand = tz.TZDateTime(tz.local, maintenant.year + 1, a.notifMois, a.notifJour, a.notifHeure, a.notifMinute)
+          .add(Duration(minutes: decalageMinutes));
+    }
+    return quand;
+  }
+
+  static Future<void> _programmerSaison(List<Map<String, String>> animaux) async {
+    if (!await AlertesSaison.actives()) return;
+    final maintenant = tz.TZDateTime.now(tz.local);
+
+    for (var i = 0; i < alertesSaison.length; i++) {
+      final a = alertesSaison[i];
+      final concernes = animaux.where((p) => a.especes.contains(p['espece'])).toList();
+      if (concernes.isEmpty) continue;
+
+      // Un texte général : une seule notification pour tous les animaux
+      // concernés. Des textes par espèce : une notification par espèce,
+      // décalées de 5 minutes pour ne pas arriver toutes d'un coup.
+      final groupes = <String, List<Map<String, String>>>{};
+      if (a.corpsParEspece.isEmpty) {
+        groupes['*'] = concernes;
+      } else {
+        for (final p in concernes) {
+          (groupes[p['espece']!] ??= []).add(p);
+        }
+      }
+
+      var rang = 0;
+      for (final entree in groupes.entries) {
+        final espece = entree.key == '*' ? concernes.first['espece']! : entree.key;
+        final noms = entree.value.map((p) => p['nom']!).where((n) => n.isNotEmpty).toList();
+        final corps = a.corpsPour(espece);
+        final texte = noms.isEmpty ? corps : 'Pour ${_noms(noms)} : $corps';
+
+        final details = NotificationDetails(
+          android: AndroidNotificationDetails(
+            'tyto_saison',
+            'Conseils de saison',
+            channelDescription: "Conseils de prévention selon la saison : épillets, chaleur, froid, feux d'artifice…",
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+            // Le texte est long : on l'affiche en entier quand on déplie.
+            styleInformation: BigTextStyleInformation(texte),
+          ),
+        );
+
+        try {
+          await _plugin.zonedSchedule(
+            _idSaison + i * 20 + rang,
+            a.titreNotif,
+            texte,
+            _prochaine(a, maintenant, rang * 5),
+            details,
+            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+            uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+          );
+        } catch (e) {
+          // Une programmation ratée ne doit jamais bloquer les autres.
+        }
+        rang++;
+      }
+    }
+  }
+
+  /// Reprogramme (ou efface) uniquement les alertes de saison, à partir de
+  /// la liste d'animaux gardée en mémoire — appelé quand on active ou
+  /// désactive les alertes depuis le menu.
+  static Future<void> reprogrammerSaisonDepuisMemoire() async {
+    if (!_pret) return;
+    final attente = await _plugin.pendingNotificationRequests();
+    for (final n in attente) {
+      if (n.id >= _idSaison) await _plugin.cancel(n.id);
+    }
+    await _programmerSaison(await _lireAnimaux());
+  }
+}
+
+/// Le réglage « Conseils de saison » du menu : activé par défaut.
+class AlertesSaison {
+  static const _cle = 'alertes_saison_actives';
+
+  static Future<bool> actives() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_cle) ?? true;
+  }
+
+  static Future<void> definir(bool actives) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_cle, actives);
   }
 }

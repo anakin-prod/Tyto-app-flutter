@@ -6,6 +6,9 @@ import '../services/auth_service.dart';
 import '../services/billing_service.dart';
 import '../services/legal_service.dart';
 import 'delete_account_dialog.dart';
+import '../services/notification_service.dart';
+import '../services/achats_service.dart';
+import '../services/user_service.dart';
 import '../screens/login_screen.dart';
 import '../screens/team_screen.dart';
 import 'tyto_icons.dart';
@@ -72,6 +75,7 @@ class TytoDrawer extends StatefulWidget {
 
 class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateMixin {
   late final AnimationController _entree;
+  bool _saisonActive = true; // les notifications « Conseils de saison »
 
   // Raccourcis pour garder le reste du code lisible.
   String get activeId => widget.activeId;
@@ -88,6 +92,9 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
       vsync: this,
       duration: const Duration(milliseconds: 620),
     )..forward();
+    AlertesSaison.actives().then((v) {
+      if (mounted) setState(() => _saisonActive = v);
+    });
   }
 
   @override
@@ -199,9 +206,35 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                                 Navigator.push(context, MaterialPageRoute(builder: (_) => const TeamScreen()));
                               },
                             ),
-                          // Pas de lien vers les offres ni vers la facturation Stripe sur
-                          // iOS : Apple y verrait un paiement hors de l'App Store.
-                          if (!PlatformInfo.estIOS && subscribed)
+                          // Sur iOS, l'abonnement passe par l'App Store, jamais par le site
+                          // ni par Stripe : Apple l'interdit (règle 3.1.1). Les boutons n'y
+                          // apparaissent que si les achats intégrés sont en place.
+                          if (PlatformInfo.estIOS) ...[
+                            if (AchatsService.disponible && !subscribed)
+                              _buildAction(
+                                icon: Icons.star_border_rounded,
+                                rang: 9,
+                                label: 'Nos offres',
+                                sub: 'Découvrir Premium & Pro',
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  AchatsService.ouvrirOffres(context);
+                                },
+                              ),
+                            // Un abonnement acheté sur le site ne se gère pas ici : on
+                            // ne propose la gestion Apple que pour un abonnement Apple.
+                            if (AchatsService.disponible && subscribed && UserService.planSource == 'apple')
+                              _buildAction(
+                                icon: Icons.settings_rounded,
+                                rang: 9,
+                                label: "Gérer l'abonnement",
+                                sub: 'Réglages Apple',
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  AchatsService.gererAbonnement();
+                                },
+                              ),
+                          ] else if (subscribed)
                             _buildAction(
                               icon: Icons.settings_rounded,
                               rang: 9,
@@ -213,7 +246,7 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                                 if (token != null) await BillingService.openPortal(token);
                               },
                             )
-                          else if (!PlatformInfo.estIOS)
+                          else
                             _buildAction(
                               icon: Icons.star_border_rounded,
                               rang: 9,
@@ -244,6 +277,24 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                               onTap: () {
                                 Navigator.pop(context);
                                 Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+                              },
+                            ),
+                          // Les conseils de saison (épillets, chaleur, froid…) : un
+                          // interrupteur, jamais caché. On ne ferme pas le menu au
+                          // toucher, pour voir le changement.
+                          if (signedIn)
+                            _buildAction(
+                              icon: _saisonActive
+                                  ? Icons.notifications_active_outlined
+                                  : Icons.notifications_off_outlined,
+                              rang: 10,
+                              label: 'Conseils de saison',
+                              sub: _saisonActive ? 'Notifications activées' : 'Notifications désactivées',
+                              onTap: () async {
+                                final nouveau = !_saisonActive;
+                                setState(() => _saisonActive = nouveau);
+                                await AlertesSaison.definir(nouveau);
+                                await NotificationService.reprogrammerSaisonDepuisMemoire();
                               },
                             ),
                           // Exigé par Apple et Google : un compte créé dans l'app doit

@@ -11,6 +11,7 @@ import '../services/auth_service.dart';
 import '../widgets/account_gate.dart';
 import '../widgets/pro_upsell.dart';
 import '../widgets/voice_button.dart';
+import '../widgets/weight_chart.dart';
 import '../services/user_service.dart';
 import '../services/pro_service.dart';
 import '../services/pdf_service.dart';
@@ -353,6 +354,16 @@ class _CarnetScreenState extends State<CarnetScreen> {
     }
   }
 
+  /// Les pesées, de la plus ancienne à la plus récente, pour la courbe.
+  List<PointPoids> get _pesees {
+    final liste = [
+      for (final e in _events)
+        if (e.type == 'poids' && e.valueNum != null && e.valueNum != 0) PointPoids(e.eventDate, e.valueNum!),
+    ];
+    liste.sort((a, b) => a.date.compareTo(b.date));
+    return liste;
+  }
+
   Widget _carteObservation() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -513,8 +524,18 @@ class _CarnetScreenState extends State<CarnetScreen> {
                                   onRefresh: _load,
                                   child: ListView.builder(
                                     padding: const EdgeInsets.all(16),
-                                    itemCount: _events.length,
-                                    itemBuilder: (context, i) {
+                                    // La courbe de poids ouvre la liste (à partir de 2 pesées) :
+                                    // elle défile avec elle, sans prendre de place fixe.
+                                    itemCount: _events.length + (_pesees.length >= 2 ? 1 : 0),
+                                    itemBuilder: (context, indice) {
+                                      final avecCourbe = _pesees.length >= 2;
+                                      if (avecCourbe && indice == 0) {
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 14),
+                                          child: WeightChart(points: _pesees),
+                                        );
+                                      }
+                                      final i = avecCourbe ? indice - 1 : indice;
                                       final e = _events[i];
                                       final parts = [
                                         _fmt(e.eventDate),

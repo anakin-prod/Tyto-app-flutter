@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/account_service.dart';
+import '../services/user_service.dart';
 
 /// La confirmation de suppression de compte. Une suppression est
 /// définitive : il faut taper le mot SUPPRIMER pour la débloquer, comme
@@ -95,6 +96,16 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                 'paiement, pour des raisons comptables et légales.',
                 style: TytoText.ui(size: 12.5, color: TytoColors.encre.withOpacity(0.6)).copyWith(height: 1.45),
               ),
+              // Apple ne permet pas d'annuler un abonnement à la place de
+              // l'utilisateur : on le lui dit clairement.
+              if (UserService.planSource == 'apple') ...[
+                const SizedBox(height: 10),
+                Text(
+                  "Ton abonnement Apple n'est pas annulé par la suppression du compte : "
+                  'résilie-le dans Réglages > ton nom > Abonnements, sinon il continuera à être facturé.',
+                  style: TytoText.ui(size: 12.5, weight: FontWeight.w600, color: TytoColors.urgence).copyWith(height: 1.45),
+                ),
+              ],
               const SizedBox(height: 14),
               Text(
                 'POUR CONFIRMER, TAPE SUPPRIMER',

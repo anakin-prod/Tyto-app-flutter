@@ -3,6 +3,7 @@ import '../theme/colors.dart';
 import '../services/platform_service.dart';
 import '../theme/typography.dart';
 import '../services/billing_service.dart';
+import '../services/achats_service.dart';
 
 /// Le même message que sur le site quand on touche une fonction réservée
 /// au plan Pro. On explique à qui elle s'adresse et ce qu'elle apporte,
@@ -83,7 +84,8 @@ class ProUpsell extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              // Sur iOS, aucun bouton vers les offres du site (règle 3.1.1 d'Apple).
+              // Sur iOS : jamais de bouton vers le site (règle 3.1.1 d'Apple) ; le bouton
+              // n'existe que si les achats intégrés Apple sont en place.
               if (!PlatformInfo.estIOS) ...[
               SizedBox(
                 width: double.infinity,
@@ -98,6 +100,24 @@ class ProUpsell extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
                   ),
                   child: Text('Découvrir le plan Pro',
+                      style: TytoText.ui(size: 15, weight: FontWeight.w700, color: const Color(0xFF0F2A24))),
+                ),
+              ),
+              ]
+              else if (AchatsService.disponible) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    AchatsService.ouvrirOffres(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: TytoColors.vert,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                  ),
+                  child: Text('Voir les offres',
                       style: TytoText.ui(size: 15, weight: FontWeight.w700, color: const Color(0xFF0F2A24))),
                 ),
               ),
