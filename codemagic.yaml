@@ -51,10 +51,11 @@ workflows:
   #   2. Une intégration Codemagic « tyto_apple » (clé App Store Connect)
   #   3. Un certificat de distribution et un profil App Store pour
   #      l'identifiant ci-dessous, dans Codemagic > Code signing identities
-  #   4. Un groupe de variables « tyto_ios » dans Codemagic (Environment
-  #      variables) contenant la variable secrète RC_IOS_KEY : la clé
-  #      publique RevenueCat « appl_… ». Si elle est vide, l'app est
-  #      compilée sans aucun bouton d'achat.
+  #   4. (plus tard, pour les abonnements) la clé PUBLIQUE RevenueCat
+  #      « appl_… », à coller à la ligne RC_IOS_KEY ci-dessous. Une clé
+  #      publique est faite pour être dans l'app : ce n'est pas un secret.
+  #      Tant qu'elle n'y est pas, l'app est compilée sans aucun bouton
+  #      d'achat. Une clé « test_ » est refusée par l'app, exprès.
   # ============================================================
   tyto-ios-testflight:
     name: Tyto — iPhone (TestFlight)
@@ -64,14 +65,13 @@ workflows:
       app_store_connect: tyto_apple
     environment:
       flutter: stable
-      groups:
-        - tyto_ios
       ios_signing:
         distribution_type: app_store
         bundle_identifier: app.tytoai.tyto
       vars:
         IOS_BUNDLE_ID: app.tytoai.tyto
         VERSION_NAME_IOS: 1.0.0
+        RC_IOS_KEY: A_REMPLIR
     scripts:
       - name: Préparer le projet iOS
         script: |

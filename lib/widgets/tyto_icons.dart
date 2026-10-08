@@ -27,6 +27,10 @@ const _chartPath = '''
 <rect x="12" y="8.6" width="2.9" height="11.6" rx="0.6" />
 <rect x="16.8" y="15.4" width="2.9" height="4.8" rx="0.6" />''';
 
+const _soinsPath = '''
+<path d="M10.23 18.72L18.72 10.23A3.5 3.5 0 0 0 13.77 5.28L5.28 13.77A3.5 3.5 0 0 0 10.23 18.72Z" />
+<path d="M9.53 9.53L14.47 14.47" />''';
+
 const _monitorPath = '''
 <rect x="2.8" y="4" width="18.4" height="13" rx="2.2" />
 <path d="M6.4 11.3h2.1l1.3-3 2.2 5.6 1.4-2.6h3.9" />
@@ -188,6 +192,10 @@ class TytoIcon extends StatelessWidget {
 
   factory TytoIcon.monitor({double size = 18, Color? color}) =>
       TytoIcon._(_wrap(_monitorPath), size: size, color: color);
+
+  /// Une gélule, pour les soins et traitements.
+  factory TytoIcon.soins({double size = 18, Color? color}) =>
+      TytoIcon._(_wrap(_soinsPath), size: size, color: color);
 
   /// L'étoile unique à 4 branches des puces de suggestion, comme sur le
   /// site (IconSparkle) — pas l'icône générique à plusieurs étoiles.

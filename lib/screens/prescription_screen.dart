@@ -8,6 +8,8 @@ import '../services/auth_service.dart';
 import '../services/pro_service.dart';
 import '../services/photo_service.dart';
 import '../services/data_service.dart';
+import '../models/soin.dart';
+import 'nouveau_soin_screen.dart';
 
 /// Fonction Pro : photographier une ordonnance, laisser Tyto la lire, puis
 /// vérifier chaque ligne avant de l'ajouter au carnet de santé.
@@ -108,6 +110,64 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("L'enregistrement n'a pas abouti, réessaie.")),
       );
+    }
+  }
+
+  /// Heures proposées par défaut selon le nombre de prises par jour. C'est
+  /// seulement un point de départ : l'écran suivant permet de tout corriger.
+  List<String> _heuresPar(int? foisParJour) {
+    final f = foisParJour ?? 1;
+    switch (f) {
+      case 0:
+      case 1:
+        return ['09:00'];
+      case 2:
+        return ['08:00', '20:00'];
+      case 3:
+        return ['08:00', '14:00', '21:00'];
+      case 4:
+        return ['08:00', '12:00', '16:00', '20:00'];
+      default:
+        final n = f.clamp(5, 8).toInt();
+        final pas = 14 ~/ n;
+        return [
+          for (var i = 0; i < n; i++) '${(7 + i * pas).toString().padLeft(2, '0')}:00',
+        ];
+    }
+  }
+
+  /// Transforme les lignes cochées en dossier de soin avec rappels.
+  Future<void> _creerDossier() async {
+    final lignes = _resultat?.lines.where((l) => l.checked && l.medication.trim().isNotEmpty).toList() ?? [];
+    if (lignes.isEmpty) return;
+    final debut = aujourdhui();
+    final traitements = <NouveauTraitement>[
+      for (final l in lignes)
+        NouveauTraitement(
+          nom: l.medication.trim(),
+          dose: (l.dose != null && l.dose!.trim().isNotEmpty) ? l.dose!.trim() : null,
+          heures: _heuresPar(l.timesPerDay),
+          tousLesJours: 1,
+          debut: debut,
+          fin: l.durationDays != null && l.durationDays! > 0
+              ? debut.add(Duration(days: l.durationDays! - 1))
+              : null,
+          notes: (l.notes != null && l.notes!.trim().isNotEmpty) ? l.notes!.trim() : null,
+        ),
+    ];
+    final ok = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NouveauSoinScreen(
+          pets: [widget.pet],
+          petInitial: widget.pet,
+          traitementsInitiaux: traitements,
+          depuisOrdonnance: true,
+        ),
+      ),
+    );
+    if (ok == true && mounted) {
+      Navigator.pop(context, true);
     }
   }
 
@@ -244,6 +304,23 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                               ? 'Coche au moins un traitement'
                               : 'Ajouter $coches traitement${coches > 1 ? 's' : ''} au carnet',
                       style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.nuit),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: (coches == 0 || _enregistrement) ? null : _creerDossier,
+                    icon: const Icon(Icons.alarm_rounded, size: 18, color: TytoColors.encre),
+                    label: Text(
+                      'Créer un dossier de soins avec rappels',
+                      style: TytoText.ui(size: 14, weight: FontWeight.w600, color: TytoColors.encre),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: TytoColors.encre.withOpacity(0.3)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
                 ),

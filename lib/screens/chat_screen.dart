@@ -28,11 +28,13 @@ import '../services/chat_service.dart';
 import '../services/user_service.dart';
 import '../services/review_service.dart';
 import '../services/notification_service.dart';
+import '../services/soins_service.dart';
 import 'placeholder_screen.dart';
 import 'pets_screen.dart';
 import 'carnet_screen.dart';
 import 'tableau_screen.dart';
 import 'veille_screen.dart';
+import 'soins_screen.dart';
 
 /// L'écran de chat, maintenant relié à la vraie IA (même API que le site)
 /// et au vrai statut Premium/Pro.
@@ -268,6 +270,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         nomsAnimaux: {for (final p in pets) p.id: p.name},
         animaux: [for (final p in pets) {'nom': p.name, 'espece': p.species}],
       );
+      // Les rappels de soins (gouttes, comprimés…) suivent le même chemin.
+      try {
+        await SoinsService.reprogrammerNotifications();
+      } catch (_) {}
 
       // On charge l'historique de chaque conversation pour le panneau
       // d'historique — mais on ne l'affiche plus directement à l'arrivée :
@@ -609,6 +615,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         break;
       case 'carnet':
         screen = const CarnetScreen();
+        break;
+      case 'soins':
+        screen = const SoinsScreen();
         break;
       case 'tableau':
         screen = const TableauScreen();

@@ -9,8 +9,8 @@
 //
 // La clé publique RevenueCat (« appl_… ») est fournie à la compilation :
 //   flutter build ipa --dart-define=RC_IOS_KEY=appl_xxx
-// Sans elle, `disponible` reste faux et l'app se comporte comme avant
-// (aucun bouton d'achat).
+// Sans une clé « appl_… », `disponible` reste faux et l'app se comporte
+// comme avant (aucun bouton d'achat).
 // ============================================================
 
 import 'package:flutter/foundation.dart';
@@ -37,7 +37,10 @@ class AchatsService {
   /// rafraîchir le statut Premium/Pro.
   static final ValueNotifier<int> achatReussi = ValueNotifier<int>(0);
 
-  static bool get disponible => defaultTargetPlatform == TargetPlatform.iOS && _cle.isNotEmpty;
+  /// Seule une vraie clé iOS (« appl_… ») active les achats. Une clé du Test
+  /// Store (« test_… ») ferait planter exprès une version publiée, et le texte
+  /// d'attente « A_REMPLIR » ne doit rien activer du tout.
+  static bool get disponible => defaultTargetPlatform == TargetPlatform.iOS && _cle.startsWith('appl_');
 
   static bool _aUnAcces(CustomerInfo info) =>
       _acces.any((nom) => info.entitlements.all[nom]?.isActive ?? false);

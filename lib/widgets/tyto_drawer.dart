@@ -25,6 +25,7 @@ const tytoDrawerItems = [
   DrawerItem(id: 'chat', label: 'Chat', sub: 'Poser une question'),
   DrawerItem(id: 'pets', label: 'Mes animaux', sub: 'Profils & compagnons'),
   DrawerItem(id: 'carnet', label: 'Carnet de santé', sub: 'Vaccins, poids, soins'),
+  DrawerItem(id: 'soins', label: 'Soins en cours', sub: 'Traitements & suivi'),
   DrawerItem(id: 'tableau', label: 'Tableau des rappels', sub: 'Ce qui arrive bientôt'),
   DrawerItem(id: 'veille', label: 'Veille sanitaire', sub: "L'analyse quotidienne"),
 ];
@@ -42,6 +43,8 @@ Widget _iconFor(String id, {required double size, required Color color}) {
       return TytoIcon.owl(size: size, color: color);
     case 'carnet':
       return TytoIcon.notebook(size: size, color: color);
+    case 'soins':
+      return TytoIcon.soins(size: size, color: color);
     case 'tableau':
       return TytoIcon.chart(size: size, color: color);
     case 'veille':

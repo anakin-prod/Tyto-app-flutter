@@ -6,6 +6,21 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import '../data/seasonal.dart';
 import '../models/health_event.dart';
 
+/// Une notification de soin à programmer : la prise d'un traitement à
+/// l'heure dite, ou la relance qui suit si elle n'a pas été cochée.
+class RappelSoin {
+  final DateTime moment;
+  final String titre;
+  final String texte;
+  final bool relance;
+  const RappelSoin({
+    required this.moment,
+    required this.titre,
+    required this.texte,
+    this.relance = false,
+  });
+}
+
 /// Rappelle un vaccin ou un vermifuge directement sur le téléphone, le
 /// jour même — même app fermée. Prévient aussi, au bon moment de l'année,
 /// des risques de saison : épillets, chaleur, froid, feux d'artifice…
@@ -18,6 +33,9 @@ class NotificationService {
   /// Les rappels du carnet prennent les numéros 0, 1, 2… ; les alertes de
   /// saison commencent à 5000 pour ne jamais s'y mélanger.
   static const _idSaison = 5000;
+
+  /// Les prises de traitements (« Soins en cours ») : de 10000 à 10999.
+  static const _idSoins = 10000;
   static const _cleAnimaux = 'saison_animaux';
 
   static Future<void> initialiser() async {
@@ -123,6 +141,59 @@ class NotificationService {
     // données (quand on active ou désactive les alertes depuis le menu).
     await _memoriserAnimaux(animaux);
     await _programmerSaison(animaux);
+  }
+
+  // ---------- Soins en cours ----------
+
+  /// Reprogramme uniquement les notifications de soins (prises de
+  /// traitements et relances), sans toucher aux rappels du carnet ni aux
+  /// alertes de saison. Appelé à l'ouverture de l'app et après chaque
+  /// action dans « Soins en cours ».
+  static Future<void> reprogrammerSoins(List<RappelSoin> rappels) async {
+    if (!_pret) return;
+    final attente = await _plugin.pendingNotificationRequests();
+    for (final n in attente) {
+      if (n.id >= _idSoins && n.id < _idSoins + 1000) await _plugin.cancel(n.id);
+    }
+
+    final maintenant = tz.TZDateTime.now(tz.local);
+    var id = _idSoins;
+    for (final r in rappels) {
+      final quand = tz.TZDateTime(
+        tz.local,
+        r.moment.year,
+        r.moment.month,
+        r.moment.day,
+        r.moment.hour,
+        r.moment.minute,
+      );
+      if (!quand.isAfter(maintenant)) continue;
+
+      final details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          'tyto_soins',
+          'Soins et traitements',
+          channelDescription: 'Les prises de médicaments et de soins à ne pas oublier',
+          importance: Importance.max,
+          priority: Priority.high,
+          styleInformation: BigTextStyleInformation(r.texte),
+        ),
+      );
+
+      try {
+        await _plugin.zonedSchedule(
+          id++,
+          r.titre,
+          r.texte,
+          quand,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      } catch (e) {
+        // Une programmation ratée ne doit jamais bloquer les autres.
+      }
+    }
   }
 
   // ---------- Alertes de saison ----------
@@ -232,7 +303,7 @@ class NotificationService {
     if (!_pret) return;
     final attente = await _plugin.pendingNotificationRequests();
     for (final n in attente) {
-      if (n.id >= _idSaison) await _plugin.cancel(n.id);
+      if (n.id >= _idSaison && n.id < _idSoins) await _plugin.cancel(n.id);
     }
     await _programmerSaison(await _lireAnimaux());
   }

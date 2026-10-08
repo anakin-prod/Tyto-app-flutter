@@ -3,6 +3,7 @@ import '../screens/pets_screen.dart';
 import '../screens/carnet_screen.dart';
 import '../screens/tableau_screen.dart';
 import '../screens/veille_screen.dart';
+import '../screens/soins_screen.dart';
 
 /// La navigation depuis le tiroir, partagée par tous les écrans : depuis
 /// le chat, on empile normalement (retour possible) ; depuis une autre
@@ -24,6 +25,9 @@ void handleDrawerNavigation(BuildContext context, String currentId, String selec
       break;
     case 'carnet':
       screen = const CarnetScreen();
+      break;
+    case 'soins':
+      screen = const SoinsScreen();
       break;
     case 'tableau':
       screen = const TableauScreen();
