@@ -19,6 +19,21 @@ Future<void> main() async {
   runApp(const TytoApp());
 }
 
+/// Sur téléphone, Flutter n'affiche aucune barre de défilement par défaut.
+/// Tyto en montre une, fine et dorée comme celle du menu du site, qui
+/// apparaît pendant qu'on fait défiler (verticalement seulement).
+class TytoScrollBehavior extends MaterialScrollBehavior {
+  const TytoScrollBehavior();
+
+  @override
+  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
+    if (details.direction == AxisDirection.left || details.direction == AxisDirection.right) {
+      return child;
+    }
+    return Scrollbar(controller: details.controller, child: child);
+  }
+}
+
 class TytoApp extends StatelessWidget {
   const TytoApp({super.key});
 
@@ -27,6 +42,7 @@ class TytoApp extends StatelessWidget {
     return MaterialApp(
       title: 'Tyto',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const TytoScrollBehavior(),
       // Le dégradé du site est posé une fois pour toutes derrière chaque
       // écran, plutôt que répété dans chacun d'eux.
       builder: (context, child) => TytoBackground(child: child ?? const SizedBox.shrink()),
@@ -37,6 +53,14 @@ class TytoApp extends StatelessWidget {
           primary: TytoColors.fauve,
           secondary: TytoColors.fauve,
           surface: TytoColors.nuit2,
+        ),
+        scrollbarTheme: ScrollbarThemeData(
+          thumbColor: WidgetStatePropertyAll(TytoColors.fauve.withOpacity(0.55)),
+          trackColor: const WidgetStatePropertyAll(Colors.transparent),
+          thickness: const WidgetStatePropertyAll(4),
+          radius: const Radius.circular(10),
+          crossAxisMargin: 2,
+          thumbVisibility: const WidgetStatePropertyAll(false),
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,

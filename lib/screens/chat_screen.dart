@@ -79,6 +79,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   late final AnimationController _pulse;
   StreamSubscription<AuthState>? _authSub;
   bool _peutRedescendre = false;
+  bool _peutRemonter = false;
   bool _etaitConnecte = false; // pour repérer le passage « compte → visiteur »
   bool _justPaid = false; // vient de passer en Premium/Pro, à l'instant
   bool _faitEstSaison = false; // l'encart affiche un conseil de saison plutôt qu'un fait
@@ -174,6 +175,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           260;
       if (loinDuBas != _peutRedescendre) {
         setState(() => _peutRedescendre = loinDuBas);
+      }
+      final loinDuHaut = _scrollController.position.pixels > 260;
+      if (loinDuHaut != _peutRemonter) {
+        setState(() => _peutRemonter = loinDuHaut);
       }
     });
   }
@@ -499,6 +504,41 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         );
       }
     });
+  }
+
+  /// Le petit bouton rond, bord doré fin, pour se déplacer dans une longue
+  /// conversation (même style que sur le site).
+  Widget _boutonDefilement(IconData icone, VoidCallback onTap, String libelle) {
+    return Semantics(
+      button: true,
+      label: libelle,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: TytoColors.nuit2,
+            border: Border.all(color: TytoColors.fauve.withOpacity(0.55)),
+            boxShadow: const [
+              BoxShadow(color: Color(0x59000000), blurRadius: 12, offset: Offset(0, 3)),
+            ],
+          ),
+          child: Icon(icone, size: 20, color: TytoColors.fauve),
+        ),
+      ),
+    );
+  }
+
+  void _scrollToTop() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   Future<void> _resetConversation() async {
@@ -1094,26 +1134,19 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                   ),
                 // Revenir au dernier message d'un geste, quand on est
                 // remonté lire le début d'une longue conversation.
-                if (_peutRedescendre)
+                if (_peutRedescendre || _peutRemonter)
                   Positioned(
                     right: 14,
                     bottom: 14,
-                    child: GestureDetector(
-                      onTap: _scrollToBottom,
-                      child: Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: TytoColors.nuit2,
-                          border: Border.all(color: TytoColors.fauve.withOpacity(0.55)),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0x59000000), blurRadius: 12, offset: Offset(0, 3)),
-                          ],
-                        ),
-                        child: const Icon(Icons.arrow_downward_rounded,
-                            size: 20, color: TytoColors.fauve),
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_peutRemonter)
+                          _boutonDefilement(Icons.arrow_upward_rounded, _scrollToTop, 'Remonter en haut'),
+                        if (_peutRemonter && _peutRedescendre) const SizedBox(height: 10),
+                        if (_peutRedescendre)
+                          _boutonDefilement(Icons.arrow_downward_rounded, _scrollToBottom, 'Revenir en bas'),
+                      ],
                     ),
                   ),
               ],
