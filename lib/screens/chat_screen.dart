@@ -506,6 +506,39 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     });
   }
 
+  /// Le texte d'invite du champ de saisie : celui du site (avec le nom de
+  /// l'animal choisi, sinon la formule générale).
+  String get _texteInvite {
+    for (final p in _pets) {
+      if (p.id == _activePetId) return 'Une question pour ${p.name}…';
+    }
+    return 'Pose ta question sur un animal…';
+  }
+
+  /// La pastille « fantôme » du site (ghostBtn) : fine bordure ivoire
+  /// translucide, icône brume, bords entièrement arrondis.
+  Widget _boutonFantome(Widget icone, String libelle, VoidCallback onTap) {
+    return Tooltip(
+      message: libelle,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(999),
+              // ghostBtn du site : border 1px LUNE + "33" (20 %)
+              border: Border.all(color: TytoColors.lune.withOpacity(0.2)),
+            ),
+            child: icone,
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Le petit bouton rond, bord doré fin, pour se déplacer dans une longue
   /// conversation (même style que sur le site).
   Widget _boutonDefilement(IconData icone, VoidCallback onTap, String libelle) {
@@ -618,7 +651,7 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           if (!_scrollController.hasClients) return;
           final cible = index * 92.0;
           _scrollController.animateTo(
-            cible.clamp(0, _scrollController.position.maxScrollExtent),
+            cible.clamp(0.0, _scrollController.position.maxScrollExtent).toDouble(),
             duration: const Duration(milliseconds: 400),
             curve: Curves.easeOut,
           );
@@ -846,12 +879,54 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        titleSpacing: 4,
+        // Le bouton du menu et le logo reprennent les mesures du site :
+        // bouton 38 px à 16 px du bord, logo 30 px, « Tyto » en 20 px.
+        leadingWidth: 54,
+        leading: Builder(
+          builder: (ctx) => Padding(
+            padding: const EdgeInsets.only(left: 16),
+            child: Center(
+              child: Semantics(
+                button: true,
+                label: 'Ouvrir le menu',
+                child: GestureDetector(
+                  onTap: () => Scaffold.of(ctx).openDrawer(),
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 9),
+                    decoration: BoxDecoration(
+                      color: TytoColors.lune.withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: TytoColors.lune.withOpacity(0.1)),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        for (var i = 0; i < 3; i++) ...[
+                          if (i > 0) const SizedBox(height: 4.5),
+                          Container(
+                            height: 2,
+                            decoration: BoxDecoration(
+                              color: TytoColors.fauve,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        titleSpacing: 8,
         title: Row(
           children: [
-            OwlSketch(size: 22, thinking: _sending),
+            OwlSketch(size: 30, thinking: _sending),
             const SizedBox(width: 8),
-            Text('Tyto', style: TytoText.display(size: 19)),
+            Text('Tyto', style: TytoText.display(size: 20)),
             if (_isPro || _isPremium) ...[
               const SizedBox(width: 8),
               Container(
@@ -868,22 +943,20 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               ),
             ],
             const Spacer(),
-            IconButton(
-              icon: const Icon(Icons.history_rounded, color: TytoColors.brume, size: 21),
-              tooltip: 'Historique des conversations',
-              onPressed: _ouvrirHistorique,
-            ),
-            if (_thread.isNotEmpty || (_conversations[_cleConversation]?.isNotEmpty ?? false))
-              IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: TytoColors.brume, size: 21),
-                tooltip: 'Nouvelle conversation',
-                onPressed: _resetConversation,
-              ),
+            // Comme sur le site : deux petites pastilles entourées, qui
+            // n'apparaissent que s'il y a une conversation à revoir.
+            if (_thread.isNotEmpty || (_conversations[_cleConversation]?.isNotEmpty ?? false)) ...[
+              _boutonFantome(TytoIcon.historique(size: 14, color: TytoColors.brume),
+                  'Historique des conversations', _ouvrirHistorique),
+              const SizedBox(width: 6),
+              _boutonFantome(TytoIcon.actualiser(size: 14, color: TytoColors.brume),
+                  'Nouvelle conversation', _resetConversation),
+            ],
             // Le halo de l'urgence, repris de sosPulse dans globals.css :
             // un anneau qui s'écarte de 0 à 6 px en s'estompant, sur 2,6 s.
             // La couleur du bouton, elle, ne bouge pas.
             Padding(
-              padding: const EdgeInsets.all(7),
+              padding: const EdgeInsets.only(left: 6, right: 16, top: 7, bottom: 7),
               child: AnimatedBuilder(
                 animation: _pulse,
                 builder: (context, child) {
@@ -915,15 +988,24 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                     child: child,
                   );
                 },
-                child: TextButton.icon(
+                child: TextButton(
                   onPressed: _openSos,
-                  icon: const Icon(Icons.warning_rounded, size: 14, color: Colors.white),
-                  label: Text('URGENCE',
-                      style: TytoText.ui(size: 11, weight: FontWeight.w700, color: Colors.white)),
                   style: TextButton.styleFrom(
                     backgroundColor: TytoColors.urgence,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.white),
+                      const SizedBox(width: 5),
+                      Text('URGENCE',
+                          style: TytoText.ui(size: 12, weight: FontWeight.w700, color: Colors.white)
+                              .copyWith(letterSpacing: 0.36)),
+                    ],
                   ),
                 ),
               ),
@@ -1246,7 +1328,16 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                         ],
                       ),
                     ),
-                  Row(
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: TytoColors.nuit2,
+                      borderRadius: BorderRadius.circular(22),
+                      // border: 1px solid LUNE + "30" (19 %), comme le site
+                      border: Border.all(color: TytoColors.lune.withOpacity(0.19)),
+                    ),
+                    child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   _compressionEnCours
                       ? const Padding(
@@ -1260,26 +1351,26 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                           onTap: _choisirPhoto,
                           actif: _isPremium || _isPro,
                         ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 8),
                   Expanded(
                     child: TextField(
                       controller: _controller,
-                      style: TytoText.ui(color: TytoColors.lune),
+                      style: TytoText.ui(size: 15.5, color: TytoColors.lune),
+                      cursorColor: TytoColors.lune,
                       decoration: InputDecoration(
-                        hintText: 'Pose ta question à Tyto…',
-                        hintStyle: TytoText.ui(color: TytoColors.brume),
-                        filled: true,
-                        fillColor: TytoColors.nuit2,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide.none,
-                        ),
+                        hintText: _texteInvite,
+                        hintStyle: TytoText.ui(size: 15.5, color: const Color(0xFF757575)),
+                        isDense: true,
+                        filled: false,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                       ),
                       onSubmitted: (_) => _sendMessage(),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   // Dicter sa question plutôt que la taper (fonction Pro).
                   if (_isPro)
                     VoiceButton(
@@ -1292,19 +1383,34 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                         );
                       },
                     ),
-                  if (_isPro) const SizedBox(width: 6),
-                  IconButton(
-                    onPressed: _sending ? null : () => _sendMessage(),
-                    icon: _sending
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.nuit))
-                        : const Icon(Icons.arrow_upward_rounded),
-                    style: IconButton.styleFrom(
-                      backgroundColor: TytoColors.fauve,
-                      foregroundColor: TytoColors.nuit,
-                    ),
+                  if (_isPro) const SizedBox(width: 8),
+                  // Comme sur le site : toujours doré, mais plus terne tant
+                  // qu'il n'y a rien à envoyer (ni texte, ni photo).
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: _controller,
+                    builder: (context, valeur, _) {
+                      final peutEnvoyer = (valeur.text.trim().isNotEmpty || _photoJointe != null) && !_sending;
+                      return GestureDetector(
+                        onTap: peutEnvoyer ? () => _sendMessage() : null,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 150),
+                          opacity: (peutEnvoyer || _sending) ? 1.0 : 0.35,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: const BoxDecoration(shape: BoxShape.circle, color: TytoColors.fauve),
+                            alignment: Alignment.center,
+                            child: _sending
+                                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.nuit))
+                                : TytoIcon.envoyer(size: 18, color: TytoColors.nuit),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
+                  ),
                 ],
               ),
             ),

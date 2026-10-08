@@ -44,6 +44,7 @@ class HistorySheet extends StatelessWidget {
     return showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      barrierColor: const Color(0xBF0A0E18), // rgba(10,14,24,0.75), comme le site
       isScrollControlled: true,
       builder: (_) => HistorySheet(jours: jours, titre: titre, onJumpTo: onJumpTo, onEffacer: onEffacer),
     );
@@ -70,31 +71,40 @@ class HistorySheet extends StatelessWidget {
       maxChildSize: 0.9,
       expand: false,
       builder: (context, scrollController) {
+        // Même feuille ivoire que sur le site : papier, encre, bord fin.
         return Container(
-          decoration: const BoxDecoration(
-            color: TytoColors.nuit2,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+          decoration: BoxDecoration(
+            color: TytoColors.papier,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+            border: Border.all(color: TytoColors.encre.withOpacity(0.15)),
+            boxShadow: const [
+              BoxShadow(color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3)),
+            ],
           ),
           child: Column(
             children: [
-              const SizedBox(height: 10),
               Container(
-                width: 38, height: 4,
-                decoration: BoxDecoration(color: TytoColors.lune.withOpacity(0.2), borderRadius: BorderRadius.circular(2)),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+                padding: const EdgeInsets.fromLTRB(20, 18, 8, 12),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: TytoColors.encre.withOpacity(0.08))),
+                ),
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text('Historique · $titre', style: TytoText.display(size: 18, color: TytoColors.lune)),
+                      child: Text('Historique · $titre',
+                          style: TytoText.display(size: 18, color: TytoColors.encre)),
                     ),
                     if (jours.isNotEmpty)
                       IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, size: 20, color: TytoColors.brume),
+                        icon: Icon(Icons.delete_outline_rounded, size: 20, color: TytoColors.encre.withOpacity(0.47)),
                         tooltip: 'Effacer cet historique',
                         onPressed: () => _confirmerEffacement(context),
                       ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, size: 22, color: TytoColors.encre.withOpacity(0.6)),
+                      tooltip: 'Fermer',
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ],
                 ),
               ),
@@ -103,39 +113,61 @@ class HistorySheet extends StatelessWidget {
                     ? Center(
                         child: Text(
                           'Rien à revoir pour le moment.',
-                          style: TytoText.body(size: 14, color: TytoColors.brume),
+                          style: TytoText.body(size: 14.5, color: TytoColors.encre.withOpacity(0.53)),
                         ),
                       )
                     : ListView.builder(
                         controller: scrollController,
-                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+                        padding: const EdgeInsets.fromLTRB(10, 6, 10, 24),
                         itemCount: jours.length,
                         itemBuilder: (context, i) {
                           final j = jours[i];
-                          return ListTile(
+                          return Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                            borderRadius: BorderRadius.circular(10),
                             onTap: () {
                               Navigator.pop(context);
                               onJumpTo(j.indexPremierMessage);
                             },
-                            leading: Container(
-                              width: 38, height: 38,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: TytoColors.fauve.withOpacity(0.4)),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 36,
+                                    height: 36,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: TytoColors.fauve.withOpacity(0.4)),
+                                    ),
+                                    child: const Icon(Icons.chat_bubble_outline_rounded, size: 15, color: TytoColors.fauve),
+                                  ),
+                                  const SizedBox(width: 13),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(_formatJour(j.jour),
+                                            style: TytoText.ui(size: 14.5, weight: FontWeight.w700, color: TytoColors.encre)),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          j.apercu,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TytoText.ui(size: 12.5, color: TytoColors.encre.withOpacity(0.53)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text('${j.nombreMessages}',
+                                      style: TytoText.ui(size: 11, color: TytoColors.encre.withOpacity(0.47))),
+                                ],
                               ),
-                              child: Icon(Icons.chat_bubble_outline_rounded, size: 16, color: TytoColors.fauve),
                             ),
-                            title: Text(_formatJour(j.jour),
-                                style: TytoText.ui(size: 14.5, weight: FontWeight.w700, color: TytoColors.lune)),
-                            subtitle: Text(
-                              j.apercu,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TytoText.ui(size: 12.5, color: TytoColors.brume),
                             ),
-                            trailing: Text('${j.nombreMessages}',
-                                style: TytoText.ui(size: 11, color: TytoColors.brume)),
                           );
                         },
                       ),
@@ -151,16 +183,17 @@ class HistorySheet extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: TytoColors.nuit2,
-        title: Text('Effacer cet historique ?', style: TytoText.display(size: 17, color: TytoColors.lune)),
+        backgroundColor: TytoColors.papier,
+        surfaceTintColor: Colors.transparent,
+        title: Text('Effacer cet historique ?', style: TytoText.display(size: 17, color: TytoColors.encre)),
         content: Text(
           'Tous les échanges de cette conversation seront définitivement supprimés.',
-          style: TytoText.body(size: 14, color: TytoColors.brume),
+          style: TytoText.body(size: 14.5, color: TytoColors.encre.withOpacity(0.75)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler', style: TytoText.ui(color: TytoColors.brume)),
+            child: Text('Annuler', style: TytoText.ui(color: TytoColors.encre.withOpacity(0.6))),
           ),
           TextButton(
             onPressed: () {

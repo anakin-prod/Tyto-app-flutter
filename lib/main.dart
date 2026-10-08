@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/colors.dart';
 import 'theme/background.dart';
@@ -14,6 +15,15 @@ const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Les barres du système (heure, navigation) prennent le bleu nuit du site
+  // au lieu du noir par défaut, avec des icônes claires.
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Color(0xFF1A2336),
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
+    systemNavigationBarColor: Color(0xFF151C2C),
+    systemNavigationBarIconBrightness: Brightness.light,
+  ));
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   await NotificationService.initialiser();
   runApp(const TytoApp());

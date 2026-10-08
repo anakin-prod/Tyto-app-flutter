@@ -27,6 +27,17 @@ const _chartPath = '''
 <rect x="12" y="8.6" width="2.9" height="11.6" rx="0.6" />
 <rect x="16.8" y="15.4" width="2.9" height="4.8" rx="0.6" />''';
 
+const _historiquePath = '''
+<path d="M3 3v5h5" />
+<path d="M3.05 13a9 9 0 1 0 2.13-6.36L3 8" />
+<path d="M12 7v5l4 2" />''';
+
+const _actualiserPath = '''
+<path d="M20.4 11.8a8.4 8.4 0 1 1-2.7-6.2" />
+<path d="M20.6 3.4v4.4h-4.4" />''';
+
+const _envoyerPath = '<path d="M10 16V4M10 4L4.5 9.5M10 4L15.5 9.5" />';
+
 const _soinsPath = '''
 <path d="M10.23 18.72L18.72 10.23A3.5 3.5 0 0 0 13.77 5.28L5.28 13.77A3.5 3.5 0 0 0 10.23 18.72Z" />
 <path d="M9.53 9.53L14.47 14.47" />''';
@@ -192,6 +203,19 @@ class TytoIcon extends StatelessWidget {
 
   factory TytoIcon.monitor({double size = 18, Color? color}) =>
       TytoIcon._(_wrap(_monitorPath), size: size, color: color);
+
+  /// L'horloge à flèche de l'historique, et la flèche circulaire de
+  /// « Nouvelle conversation » : mêmes tracés que sur le site.
+  factory TytoIcon.historique({double size = 14, Color? color}) =>
+      TytoIcon._(_wrap(_historiquePath, strokeWidth: 1.8), size: size, color: color);
+
+  factory TytoIcon.actualiser({double size = 14, Color? color}) =>
+      TytoIcon._(_wrap(_actualiserPath), size: size, color: color);
+
+  /// La flèche du bouton d'envoi : le tracé exact du site (grille 20x20,
+  /// trait de 2,2).
+  factory TytoIcon.envoyer({double size = 18, Color? color}) =>
+      TytoIcon._(_wrap(_envoyerPath, strokeWidth: 2.2, viewBox: '0 0 20 20'), size: size, color: color);
 
   /// Une gélule, pour les soins et traitements.
   factory TytoIcon.soins({double size = 18, Color? color}) =>
