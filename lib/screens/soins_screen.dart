@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/pet.dart';
 import '../models/soin.dart';
 import '../services/auth_service.dart';
@@ -8,16 +9,19 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/account_gate.dart';
 import '../widgets/drawer_navigation.dart';
+import '../widgets/fenetre_papier.dart';
+import '../widgets/paw_trails.dart';
 import '../widgets/soin_widgets.dart';
 import '../widgets/tyto_drawer.dart';
-import '../widgets/tyto_icons.dart';
-import '../widgets/tyto_tile.dart';
+import 'emergency_sheet.dart';
 import 'nouveau_soin_screen.dart';
 import 'soin_dossier_screen.dart';
+import 'tableau_entete.dart';
 
-/// « Soins en cours » : les prises du jour à cocher, et les dossiers de
-/// soin ouverts (conjonctivite, plaie, traitement long…), chacun avec ses
-/// traitements à heures fixes et le suivi de son évolution.
+/// « Soins en cours » (SoinsPanel du site) : la carte d'introduction, le
+/// bouton « Ouvrir un dossier de soin », les prises du jour à cocher, les
+/// dossiers en cours et les dossiers terminés. Un dossier s'ouvre dans
+/// son propre écran (sur le site, il se déplie sur place).
 class SoinsScreen extends StatefulWidget {
   const SoinsScreen({super.key});
 
@@ -30,6 +34,8 @@ class _SoinsScreenState extends State<SoinsScreen> {
   List<Pet> _pets = [];
   bool _chargement = true;
   bool _erreur = false;
+  bool _tablesAbsentes = false; // erreurTables du site : script v8 pas encore passé
+  bool _occupe = false;
   bool _isPro = false;
   bool _isPremium = false;
 
@@ -57,13 +63,14 @@ class _SoinsScreenState extends State<SoinsScreen> {
         }
       }
       final etat = await SoinsService.charger();
-      final pets = await _chargerAnimaux();
+      final pets = await SoinsService.animaux();
       if (!mounted) return;
       setState(() {
         _etat = etat;
         _pets = pets;
         _chargement = false;
         _erreur = false;
+        _tablesAbsentes = false;
       });
       // Les notifications suivent toujours l'état réel des soins.
       SoinsService.programmerDepuis(etat, pets);
@@ -72,17 +79,18 @@ class _SoinsScreenState extends State<SoinsScreen> {
       setState(() {
         _chargement = false;
         _erreur = true;
+        // Tables care_* absentes : le message du site sur le script v8.
+        _tablesAbsentes = e.toString().contains('care_');
       });
     }
   }
 
-  Future<List<Pet>> _chargerAnimaux() => SoinsService.animaux();
-
-  String? _nomAnimal(String petId) {
+  /// nomDe du site : le nom de l'animal, ou « Ton compagnon ».
+  String _nomDe(String petId) {
     for (final p in _pets) {
       if (p.id == petId) return p.name;
     }
-    return null;
+    return 'Ton compagnon';
   }
 
   Pet? _animal(String petId) {
@@ -92,12 +100,14 @@ class _SoinsScreenState extends State<SoinsScreen> {
     return null;
   }
 
+  // ---------- Actions ----------
+
   Future<void> _nouveau() async {
     final cree = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => NouveauSoinScreen(pets: _pets)),
     );
-    if (cree == true) _charger(silencieux: true);
+    if (cree == true && mounted) _charger(silencieux: true);
   }
 
   Future<void> _ouvrir(SoinDossier d) async {
@@ -108,261 +118,237 @@ class _SoinsScreenState extends State<SoinsScreen> {
     if (mounted) _charger(silencieux: true);
   }
 
-  void _message(String texte) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
-  }
-
   Future<void> _pointer(SoinOccurrence o, {bool sauter = false}) async {
+    if (_occupe) return;
+    setState(() => _occupe = true);
     try {
       await SoinsService.pointer(o, sautee: sauter);
       await _charger(silencieux: true);
     } catch (e) {
-      if (mounted) _message("La prise n'a pas pu être enregistrée, réessaie.");
+      if (mounted) messageSoin(context, "La prise n'a pas pu être enregistrée, réessaie.");
+    } finally {
+      if (mounted) setState(() => _occupe = false);
     }
   }
 
   Future<void> _annuler(SoinOccurrence o) async {
     final prise = o.prise;
-    if (prise == null) return;
+    if (prise == null || _occupe) return;
+    setState(() => _occupe = true);
     try {
       await SoinsService.annulerPrise(prise.id);
       await _charger(silencieux: true);
     } catch (e) {
-      if (mounted) _message("L'annulation n'a pas abouti, réessaie.");
+      if (mounted) messageSoin(context, "L'annulation n'a pas abouti, réessaie.");
+    } finally {
+      if (mounted) setState(() => _occupe = false);
+    }
+  }
+
+  /// « Résumé » d'un dossier terminé : le site le copie, l'application le
+  /// partage (message, e-mail… ou copie depuis la feuille de partage). Le
+  /// texte est celui du site, mot pour mot.
+  Future<void> _resume(SoinDossier d) async {
+    final nom = _nomDe(d.petId);
+    final texte = soinsResume(_etat, d, nom, _animal(d.petId), DateTime.now());
+    await Share.share(texte, subject: 'Suivi de $nom — ${d.titre}');
+  }
+
+  /// Le bouton URGENCE de l'en-tête du site.
+  void _ouvrirUrgence() {
+    final Pet? p = _pets.isNotEmpty ? _pets.first : null;
+    EmergencySheet.ouvrir(context, petId: p?.id, petName: p?.name, petWeight: p?.weightKg);
+  }
+
+  Future<void> _supprimer(SoinDossier d) async {
+    final ok = await confirmerSoin(
+      context,
+      'Supprimer définitivement le dossier « ${d.titre} », ses traitements et son suivi ?',
+      'Supprimer',
+    );
+    if (!ok || !mounted) return;
+    setState(() => _occupe = true);
+    try {
+      await SoinsService.supprimerDossier(d.id);
+      await SoinsService.reprogrammerNotifications();
+      await _charger(silencieux: true);
+    } catch (e) {
+      if (mounted) messageSoin(context, "La suppression n'a pas abouti, réessaie.");
+    } finally {
+      if (mounted) setState(() => _occupe = false);
     }
   }
 
   // ---------- Morceaux d'écran ----------
 
-  Widget _introduction() {
-    return Container(
-      margin: const EdgeInsets.only(top: 6),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: TytoColors.nuit2,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: TytoColors.fauve.withOpacity(0.35)),
-      ),
+  /// Un dossier en cours (replié, comme sur le site) : un toucher l'ouvre.
+  Widget _carteDossier(SoinDossier d) {
+    final nom = _nomDe(d.petId);
+    final suivis = _etat.suivisDe(d.id);
+    final alerte = _etat.alerte(d, nom);
+    return CarteSoin(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              TytoIcon.soins(size: 22, color: TytoColors.fauve),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text('Ne rate plus une prise', style: TytoText.display(size: 18)),
-              ),
-            ],
+          EnteteDossierSoin(
+            titre: d.titre,
+            ligne: soinsLigneDossier(_etat, d, nom),
+            dernier: suivis.isNotEmpty ? suivis.first : null,
+            deplie: false,
+            onTap: () => _ouvrir(d),
           ),
-          const SizedBox(height: 10),
-          Text(
-            "Le vétérinaire prescrit des gouttes tous les soirs à 21 h ? Ouvre un dossier de soin : "
-            "Tyto sonne à l'heure dite, tu coches « Fait », et tu notes chaque jour si ça va mieux. "
-            "En cas de doute, tout est prêt à montrer au vétérinaire.",
-            style: TytoText.body(size: 14.5, color: TytoColors.lune.withOpacity(0.85)).copyWith(height: 1.55),
-          ),
-          const SizedBox(height: 14),
-          ElevatedButton.icon(
-            onPressed: _nouveau,
-            icon: const Icon(Icons.add_rounded, size: 18, color: TytoColors.nuit),
-            label: Text('Ouvrir un dossier de soin', style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.nuit)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: TytoColors.fauve,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+          if (alerte != null) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _ouvrir(d),
+              child: AlerteSoin(texte: alerte.texte, grave: alerte.grave),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _carteDossier(SoinDossier d) {
-    final nom = _nomAnimal(d.petId) ?? 'Ton compagnon';
-    final pet = _animal(d.petId);
-    final maintenant = DateTime.now();
-    final suivi = _etat.suiviLe(d.id, aujourdhui());
-    final alerte = _etat.alerte(d, nom);
-    final prochaine = _etat.prochainePrise(d.id, maintenant);
-
-    String lignePrise;
-    if (prochaine != null) {
-      final aujourdHui = prochaine.jour == aujourdhui();
-      final demain = prochaine.jour == aujourdhui().add(const Duration(days: 1));
-      final quand = aujourdHui
-          ? "aujourd'hui"
-          : demain
-              ? 'demain'
-              : 'le ${jourCourt(prochaine.jour)}';
-      lignePrise = 'Prochaine prise : $quand à ${prochaine.heure}';
-    } else {
-      lignePrise = _etat.traitementsDe(d.id).isEmpty ? 'Suivi seul, sans traitement' : 'Plus de prise à venir';
-    }
-
-    return InkWell(
-      onTap: () => _ouvrir(d),
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: TytoColors.nuit2,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: (alerte != null && alerte.grave ? TytoColors.urgence : TytoColors.lune).withOpacity(0.18)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: TytoColors.fauve.withOpacity(0.16),
-                    border: Border.all(color: TytoColors.fauve.withOpacity(0.5)),
-                  ),
-                  alignment: Alignment.center,
-                  child: SpeciesIcon(species: pet?.species ?? 'autre', size: 20, color: TytoColors.fauve),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(d.titre, style: TytoText.ui(size: 15.5, weight: FontWeight.w700)),
-                      const SizedBox(height: 2),
-                      Text('$nom · jour ${d.jourNumero}', style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
-                    ],
-                  ),
-                ),
-                if (suivi != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: couleurSuivi(suivi.etat).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(iconeSuivi(suivi.etat), size: 14, color: couleurSuivi(suivi.etat)),
-                        const SizedBox(width: 4),
-                        Text(libelleSuivi(suivi.etat),
-                            style: TytoText.ui(size: 11.5, weight: FontWeight.w700, color: couleurSuivi(suivi.etat))),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                const Icon(Icons.schedule_rounded, size: 15, color: TytoColors.brume),
-                const SizedBox(width: 6),
-                Expanded(child: Text(lignePrise, style: TytoText.ui(size: 13, color: TytoColors.lune.withOpacity(0.8)))),
-              ],
-            ),
-            if (suivi == null) ...[
-              const SizedBox(height: 6),
-              Row(
+  /// Un dossier terminé : titre, animal et dates, « Résumé », « Supprimer ».
+  Widget _carteTermine(SoinDossier d) {
+    return CarteSoin(
+      padding: const EdgeInsets.fromLTRB(16, 11, 16, 11),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _ouvrir(d),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.edit_note_rounded, size: 16, color: TytoColors.fauve),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text("Comment va $nom aujourd'hui ? Note-le dans le dossier.",
-                        style: TytoText.ui(size: 12.5, color: TytoColors.fauve)),
-                  ),
+                  Text(d.titre, style: TytoText.ui(size: 14.5, weight: FontWeight.w700, color: TytoColors.encre)),
+                  Text(soinsLigneTermine(d, _nomDe(d.petId)), style: TytoText.ui(size: 12.5, color: encreA(0x99))),
                 ],
               ),
-            ],
-            if (alerte != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: (alerte.grave ? TytoColors.urgence : TytoColors.fauve).withOpacity(0.13),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: (alerte.grave ? TytoColors.urgence : TytoColors.fauve).withOpacity(0.5)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline_rounded, size: 16, color: alerte.grave ? TytoColors.urgence : TytoColors.fauve),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(alerte.texte, style: TytoText.ui(size: 12.5, color: TytoColors.lune))),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          BoutonDiscretSoin('Résumé', onTap: () => _resume(d)),
+          const SizedBox(width: 10),
+          BoutonDiscretSoin('Supprimer', onTap: () => _supprimer(d)),
+        ],
       ),
     );
   }
 
   Widget _contenu() {
     final actifs = _etat.actifs;
-    final aujourd = aujourdhui();
-    final prises = _etat.occurrencesLe(aujourd);
-    final multi = _pets.length > 1;
-    final clos = _etat.clos.take(6).toList();
+    final clos = _etat.clos.take(10).toList();
+    final prises = soinsDuJour(_etat, DateTime.now());
+
+    final enfants = <Widget>[const IntroSoins()];
+
+    if (_pets.isEmpty) {
+      enfants.add(Text(
+        "Crée d'abord le profil d'un compagnon pour ouvrir un dossier de soin.",
+        style: TytoText.ui(size: 14, color: TytoColors.brume),
+      ));
+    } else {
+      enfants.add(Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: SizedBox(
+          width: double.infinity,
+          child: BoutonOrSoin('Ouvrir un dossier de soin', onTap: _nouveau),
+        ),
+      ));
+    }
+
+    // Aujourd'hui : toutes les prises du jour, dans une seule carte.
+    if (prises.isNotEmpty) {
+      enfants.add(titreSection("Aujourd'hui", haut: 6));
+      enfants.add(CarteSoin(
+        child: Column(
+          children: [
+            for (var i = 0; i < prises.length; i++)
+              LignePriseSoin(
+                occurrence: prises[i],
+                nomAnimal: _nomDe(prises[i].traitement.petId),
+                trait: i > 0,
+                onFait: () => _pointer(prises[i]),
+                onPasser: () => _pointer(prises[i], sauter: true),
+                onAnnuler: () => _annuler(prises[i]),
+              ),
+          ],
+        ),
+      ));
+    }
+
+    // Dossiers en cours. Les marges du site se fondent : après une carte
+    // (12 px dessous), le titre n'ajoute rien ; sinon il ajoute ses 10 px.
+    enfants.add(titreSection('Dossiers en cours', haut: prises.isNotEmpty ? 0 : 10));
+    if (actifs.isEmpty) {
+      enfants.add(Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: Text(
+          'Aucun dossier ouvert. Quand le vétérinaire prescrit un traitement, ouvre un dossier : '
+          'Tyto garde les heures et le suivi.',
+          style: TytoText.ui(size: 14, color: TytoColors.brume),
+        ),
+      ));
+    }
+    for (final d in actifs) {
+      enfants.add(_carteDossier(d));
+    }
+
+    // Terminés (16 px au-dessus : 12 + 4 après une carte, 14 + 2 après le texte).
+    var apresCarte = actifs.isNotEmpty;
+    if (clos.isNotEmpty) {
+      enfants.add(titreSection('Terminés', haut: apresCarte ? 4 : 2));
+      for (final d in clos) {
+        enfants.add(_carteTermine(d));
+      }
+      apresCarte = true;
+    }
+
+    // La phrase du bas (18 px au-dessus).
+    enfants.add(avertissementSoins(haut: apresCarte ? 6 : 4));
 
     return RefreshIndicator(
       color: TytoColors.fauve,
       backgroundColor: TytoColors.nuit2,
       onRefresh: () => _charger(silencieux: true),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
-        children: [
-          if (actifs.isEmpty) _introduction(),
-          if (actifs.isNotEmpty) ...[
-            titreSection("Aujourd'hui"),
-            if (prises.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(left: 2, bottom: 4),
-                child: Text(
-                  "Aucune prise prévue aujourd'hui.",
-                  style: TytoText.body(size: 14.5, color: TytoColors.brume),
-                ),
-              ),
-            for (final o in prises)
-              LignePriseSoin(
-                occurrence: o,
-                nomAnimal: multi ? _nomAnimal(o.traitement.petId) : null,
-                onFait: () => _pointer(o),
-                onPasser: () => _pointer(o, sauter: true),
-                onAnnuler: () => _annuler(o),
-              ),
-            titreSection('Dossiers en cours'),
-            for (final d in actifs) _carteDossier(d),
-            const SizedBox(height: 4),
-            OutlinedButton.icon(
-              onPressed: _nouveau,
-              icon: const Icon(Icons.add_rounded, size: 18, color: TytoColors.fauve),
-              label: Text('Nouveau dossier de soin', style: TytoText.ui(size: 14, color: TytoColors.fauve)),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: TytoColors.fauve.withOpacity(0.55)),
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
-          if (clos.isNotEmpty) ...[
-            titreSection('Terminés'),
-            for (final d in clos)
-              TytoTile(
-                icon: Icons.check_circle_outline_rounded,
-                title: d.titre,
-                subtitle: '${_nomAnimal(d.petId) ?? 'Compagnon'} · du ${jourCourt(d.debut)} au ${jourLong(d.cloture ?? d.debut)}',
-                accent: TytoColors.vert,
-                onTap: () => _ouvrir(d),
-              ),
-          ],
-        ],
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+        children: enfants,
       ),
+    );
+  }
+
+  /// Les tables absentes : la carte du site (« pas encore activée… script
+  /// v8 »). Sinon (pas de réseau…), propre à l'application : le même
+  /// habillage, un texte sur la connexion et « Réessayer ».
+  Widget _erreurChargement() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+      children: [
+        CarteSoin(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Soins en cours', style: TytoText.display(size: 19, color: TytoColors.encre)),
+              const SizedBox(height: 6),
+              Text(
+                _tablesAbsentes
+                    ? "Cette rubrique n'est pas encore activée sur ce compte. Le script Supabase « v8 – soins » doit d'abord être exécuté."
+                    : "Impossible de charger les soins pour l'instant. Vérifie ta connexion.",
+                style: TytoText.body(size: 15.5, color: TytoColors.encre).copyWith(height: 1.55),
+              ),
+              if (!_tablesAbsentes) ...[
+                const SizedBox(height: 12),
+                BoutonDiscretSoin('Réessayer', onTap: () => _charger()),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -376,48 +362,33 @@ class _SoinsScreenState extends State<SoinsScreen> {
         isPro: _isPro,
         isPremium: _isPremium,
       ),
-      appBar: AppBar(
-        title: Text('Soins en cours', style: TytoText.display(size: 19)),
-        actions: [
-          if (AuthService.isSignedIn && _pets.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.add_rounded, color: TytoColors.fauve),
-              tooltip: 'Nouveau dossier de soin',
-              onPressed: _nouveau,
-            ),
+      // L'en-tête du site, le même sur toutes les rubriques.
+      appBar: EnteteSite.pour(
+        context,
+        isPro: _isPro,
+        isPremium: _isPremium,
+        onUrgence: _ouvrirUrgence,
+      ),
+      body: Stack(
+        children: [
+          // Les empreintes qui traversent le fond, comme sur tout le site.
+          const Positioned.fill(child: PawTrails()),
+          Positioned.fill(
+            child: !AuthService.isSignedIn
+                ? const AccountGate()
+                : _chargement
+                    // Le texte d'attente du site n'est pas dans le bloc à 16 px
+                    // du haut : 8 px (main) + ses 24 px.
+                    ? ListView(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                        children: [chargementSoins()],
+                      )
+                    : _erreur
+                        ? _erreurChargement()
+                        : _contenu(),
+          ),
         ],
       ),
-      body: !AuthService.isSignedIn
-          ? const AccountGate()
-          : _chargement
-              ? const Center(child: CircularProgressIndicator(color: TytoColors.fauve))
-              : _erreur
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(28),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              "Impossible de charger les soins pour l'instant. Vérifie ta connexion.",
-                              textAlign: TextAlign.center,
-                              style: TytoText.body(size: 14.5, color: TytoColors.brume),
-                            ),
-                            const SizedBox(height: 14),
-                            OutlinedButton(
-                              onPressed: _charger,
-                              child: Text('Réessayer', style: TytoText.ui(color: TytoColors.fauve)),
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : _pets.isEmpty
-                      ? const TytoEmptyState(
-                          icon: Icons.medication_outlined,
-                          message: "Ajoute d'abord un compagnon dans « Mes animaux »\npour suivre ses soins.",
-                        )
-                      : _contenu(),
     );
   }
 }

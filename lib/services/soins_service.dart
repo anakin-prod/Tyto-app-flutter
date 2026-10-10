@@ -145,7 +145,10 @@ class SoinsService {
 
   /// « Arrêter » : aujourd'hui devient le dernier jour du traitement.
   static Future<void> arreterTraitement(SoinTraitement t) async {
-    final fin = aujourdhui().isBefore(t.debut) ? t.debut : aujourdhui();
+    // Comme sur le site : on arrête à la veille, les prises passées
+    // restent dans l'historique et plus rien n'est prévu aujourd'hui.
+    final hier = aujourdhui().subtract(const Duration(days: 1));
+    final fin = hier.isBefore(t.debut) ? t.debut : hier;
     await _db.from('care_treatments').update({'end_date': cleJour(fin)}).eq('id', t.id);
   }
 

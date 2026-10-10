@@ -31,11 +31,14 @@ class WeightChart extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      // Sur le site, la courbe est sur fond blanc (#fff), pas sur le papier.
       decoration: BoxDecoration(
-        color: TytoColors.papier,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: TytoColors.encre.withOpacity(0.15)),
-        boxShadow: const [BoxShadow(color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3))],
+        // 0 3px 14px rgba(0,0,0,0.28) : un flou CSS de 14 px vaut un écart-type
+        // de 7, soit blurRadius 11,3 pour Flutter (7 = r x 0,577 + 0,5).
+        boxShadow: const [BoxShadow(color: Color(0x47000000), blurRadius: 11.3, offset: Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -78,7 +81,9 @@ class _PoidsPainter extends CustomPainter {
   String _jourMois(DateTime d) =>
       '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
 
-  void _texte(Canvas canvas, String t, Offset position, {required bool alignerADroite, bool centrerVertical = false}) {
+  /// Un texte SVG : [ligneDeBase] est la position de sa ligne de base
+  /// (l'attribut y de <text>), ancré au début ou à la fin (text-anchor).
+  void _texte(Canvas canvas, String t, double x, double ligneDeBase, {required bool alignerADroite}) {
     final tp = TextPainter(
       text: TextSpan(
         text: t,
@@ -86,9 +91,8 @@ class _PoidsPainter extends CustomPainter {
       ),
       textDirection: TextDirection.ltr,
     )..layout();
-    final x = alignerADroite ? position.dx - tp.width : position.dx;
-    final y = centrerVertical ? position.dy - tp.height / 2 : position.dy - tp.height;
-    tp.paint(canvas, Offset(x, y));
+    final base = tp.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+    tp.paint(canvas, Offset(alignerADroite ? x - tp.width : x, ligneDeBase - base));
   }
 
   @override
@@ -123,7 +127,7 @@ class _PoidsPainter extends CustomPainter {
       ..strokeWidth = 1;
     for (final v in [minY, (minY + maxY) / 2, maxY]) {
       canvas.drawLine(Offset(_padL, py(v)), Offset(_w - _padR, py(v)), grille);
-      _texte(canvas, v.toStringAsFixed(1), Offset(_padL - 5, py(v)), alignerADroite: true, centrerVertical: true);
+      _texte(canvas, v.toStringAsFixed(1), _padL - 5, py(v) + 3, alignerADroite: true);
     }
 
     // La courbe, puis la zone dégradée en dessous
@@ -135,6 +139,8 @@ class _PoidsPainter extends CustomPainter {
       ..lineTo(px(maxX), _h - _padB)
       ..lineTo(px(minX), _h - _padB)
       ..close();
+    // Le dégradé SVG (x1=0 y1=0 x2=0 y2=1) s'étire sur la boîte de la
+    // zone elle-même : du point le plus haut de la courbe jusqu'à l'axe.
     canvas.drawPath(
       zone,
       Paint()
@@ -142,7 +148,7 @@ class _PoidsPainter extends CustomPainter {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [_or.withOpacity(0.35), _or.withOpacity(0.02)],
-        ).createShader(const Rect.fromLTWH(0, 0, _w, _h)),
+        ).createShader(zone.getBounds()),
     );
     canvas.drawPath(
       courbe,
@@ -169,8 +175,8 @@ class _PoidsPainter extends CustomPainter {
     }
 
     // Première et dernière date, sous la courbe
-    _texte(canvas, _jourMois(points.first.date), Offset(px(minX), _h - 4), alignerADroite: false);
-    _texte(canvas, _jourMois(points.last.date), Offset(px(maxX), _h - 4), alignerADroite: true);
+    _texte(canvas, _jourMois(points.first.date), px(minX), _h - 6, alignerADroite: false);
+    _texte(canvas, _jourMois(points.last.date), px(maxX), _h - 6, alignerADroite: true);
 
     canvas.restore();
   }

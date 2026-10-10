@@ -5,12 +5,14 @@ import '../models/soin.dart';
 import '../services/soins_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
+import '../widgets/fenetre_papier.dart';
+import '../widgets/paw_trails.dart';
 import '../widgets/soin_widgets.dart';
 import '../widgets/traitement_form.dart';
 
-/// Le détail d'un dossier de soin : comment va l'animal aujourd'hui, les
-/// traitements avec leurs prises du jour, l'historique du suivi, et de
-/// quoi préparer la consultation chez le vétérinaire.
+/// Le détail d'un dossier de soin : c'est le dossier « déplié » du site
+/// (Dossier dans SoinsPanel.js) — comment va l'animal aujourd'hui, les
+/// traitements, l'évolution, le résumé pour le vétérinaire, la clôture.
 class SoinDossierScreen extends StatefulWidget {
   final String dossierId;
   const SoinDossierScreen({super.key, required this.dossierId});
@@ -24,8 +26,8 @@ class _SoinDossierScreenState extends State<SoinDossierScreen> {
   List<Pet> _pets = [];
   bool _chargement = true;
   bool _erreur = false;
+  bool _occupe = false;
   final _note = TextEditingController();
-  bool _envoiSuivi = false;
 
   @override
   void initState() {
@@ -56,13 +58,11 @@ class _SoinDossierScreenState extends State<SoinDossierScreen> {
       final etat = await SoinsService.charger();
       final pets = await SoinsService.animaux();
       if (!mounted) return;
-      final suiviDuJour = etat.suiviLe(widget.dossierId, aujourdhui());
       setState(() {
         _etat = etat;
         _pets = pets;
         _chargement = false;
         _erreur = false;
-        if (suiviDuJour?.note != null && _note.text.isEmpty) _note.text = suiviDuJour!.note!;
       });
       SoinsService.programmerDepuis(etat, pets);
     } catch (e) {
@@ -74,505 +74,422 @@ class _SoinDossierScreenState extends State<SoinDossierScreen> {
     }
   }
 
-  void _message(String texte) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
-  }
-
   // ---------- Actions ----------
 
-  Future<void> _pointer(SoinOccurrence o, {bool sauter = false}) async {
+  /// Lance une écriture en évitant les doubles touchers (occupe du site).
+  Future<void> _ecrire(Future<void> Function() action, String echec) async {
+    if (_occupe) return;
+    setState(() => _occupe = true);
     try {
-      await SoinsService.pointer(o, sautee: sauter);
+      await action();
       await _charger(silencieux: true);
     } catch (e) {
-      if (mounted) _message("La prise n'a pas pu être enregistrée, réessaie.");
+      if (mounted) messageSoin(context, echec);
+    } finally {
+      if (mounted) setState(() => _occupe = false);
     }
   }
+
+  Future<void> _pointer(SoinOccurrence o, {bool sauter = false}) =>
+      _ecrire(() => SoinsService.pointer(o, sautee: sauter), "La prise n'a pas pu être enregistrée, réessaie.");
 
   Future<void> _annuler(SoinOccurrence o) async {
     final prise = o.prise;
     if (prise == null) return;
-    try {
-      await SoinsService.annulerPrise(prise.id);
-      await _charger(silencieux: true);
-    } catch (e) {
-      if (mounted) _message("L'annulation n'a pas abouti, réessaie.");
-    }
+    await _ecrire(() => SoinsService.annulerPrise(prise.id), "L'annulation n'a pas abouti, réessaie.");
   }
 
+  /// Mieux / Pareil / Moins bien : la note tapée, sinon celle déjà
+  /// enregistrée aujourd'hui, part avec.
   Future<void> _suivi(String etat) async {
-    if (_envoiSuivi) return;
-    setState(() => _envoiSuivi = true);
-    try {
-      await SoinsService.enregistrerSuivi(dossierId: widget.dossierId, etat: etat, note: _note.text);
-      await _charger(silencieux: true);
-    } catch (e) {
-      if (mounted) _message("Le suivi n'a pas pu être enregistré, réessaie.");
-    } finally {
-      if (mounted) setState(() => _envoiSuivi = false);
-    }
+    final actuel = _etat.suiviLe(widget.dossierId, aujourdhui());
+    final saisie = _note.text.trim();
+    final note = saisie.isNotEmpty ? saisie : (actuel?.note ?? '');
+    await _ecrire(
+      () => SoinsService.enregistrerSuivi(dossierId: widget.dossierId, etat: etat, note: note),
+      "Le suivi n'a pas pu être enregistré, réessaie.",
+    );
+  }
+
+  /// « Enregistrer la note » : garde l'état du jour, change la note.
+  Future<void> _enregistrerNote() async {
+    final actuel = _etat.suiviLe(widget.dossierId, aujourdhui());
+    if (actuel == null) return;
+    final note = _note.text;
+    await _ecrire(
+      () => SoinsService.enregistrerSuivi(dossierId: widget.dossierId, etat: actuel.etat, note: note),
+      "Le suivi n'a pas pu être enregistré, réessaie.",
+    );
+    if (mounted) setState(() => _note.clear());
   }
 
   Future<void> _ajouterTraitement() async {
     final d = _dossier;
     if (d == null) return;
     final t = await ouvrirFormulaireTraitement(context);
-    if (t == null) return;
-    try {
-      await SoinsService.ajouterTraitement(d, t);
-      await _charger(silencieux: true);
-    } catch (e) {
-      if (mounted) _message("Le traitement n'a pas pu être ajouté, réessaie.");
-    }
+    if (t == null || !mounted) return;
+    await _ecrire(() => SoinsService.ajouterTraitement(d, t), "Le traitement n'a pas pu être ajouté, réessaie.");
   }
 
   Future<void> _modifierTraitement(SoinTraitement t) async {
     final nouveau = await ouvrirFormulaireTraitement(context, initial: t.versNouveau());
-    if (nouveau == null) return;
-    try {
-      await SoinsService.modifierTraitement(t.id, nouveau);
-      await _charger(silencieux: true);
-    } catch (e) {
-      if (mounted) _message("La modification n'a pas abouti, réessaie.");
-    }
+    if (nouveau == null || !mounted) return;
+    await _ecrire(() => SoinsService.modifierTraitement(t.id, nouveau), "La modification n'a pas abouti, réessaie.");
   }
 
-  Future<bool> _confirmer(String titre, String texte, String bouton) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: TytoColors.nuit2,
-        title: Text(titre, style: TytoText.display(size: 18)),
-        content: Text(texte, style: TytoText.body(size: 14.5, color: TytoColors.lune.withOpacity(0.85))),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Annuler', style: TytoText.ui(color: TytoColors.brume)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(bouton, style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.fauve)),
-          ),
-        ],
-      ),
-    );
-    return ok == true;
-  }
-
-  Future<void> _arreter(SoinTraitement t) async {
-    final ok = await _confirmer(
-      'Arrêter ce traitement ?',
-      "${t.nom} ne sera plus rappelé à partir de demain. Les prises déjà cochées restent dans l'historique.",
-      'Arrêter',
-    );
-    if (!ok) return;
-    try {
-      await SoinsService.arreterTraitement(t);
-      await _charger(silencieux: true);
-    } catch (e) {
-      if (mounted) _message("L'arrêt n'a pas abouti, réessaie.");
-    }
-  }
+  /// « Arrêter » : comme sur le site, sans confirmation (les prises déjà
+  /// cochées restent dans l'historique).
+  Future<void> _arreter(SoinTraitement t) =>
+      _ecrire(() => SoinsService.arreterTraitement(t), "L'arrêt n'a pas abouti, réessaie.");
 
   Future<void> _supprimer(SoinTraitement t) async {
-    final ok = await _confirmer(
-      'Supprimer ce traitement ?',
-      '${t.nom} sera retiré du dossier, avec ses prises cochées.',
-      'Supprimer',
-    );
-    if (!ok) return;
-    try {
-      await SoinsService.supprimerTraitement(t.id);
-      await _charger(silencieux: true);
-    } catch (e) {
-      if (mounted) _message("La suppression n'a pas abouti, réessaie.");
-    }
+    final ok = await confirmerSoin(context, 'Supprimer ce traitement et ses prises cochées ?', 'Supprimer');
+    if (!ok || !mounted) return;
+    await _ecrire(() => SoinsService.supprimerTraitement(t.id), "La suppression n'a pas abouti, réessaie.");
   }
 
   Future<void> _cloturer() async {
     final d = _dossier;
-    if (d == null) return;
-    final nom = _animal?.name ?? 'ton compagnon';
-    final ok = await _confirmer(
-      'Clôturer ce dossier ?',
-      "Les rappels s'arrêtent et le dossier passe dans « Terminés ». Une note est ajoutée au carnet de $nom.",
+    if (d == null || _occupe) return;
+    final ok = await confirmerSoin(
+      context,
+      "Clôturer le dossier « ${d.titre} » ? Les rappels s'arrêtent.",
       'Clôturer',
     );
-    if (!ok) return;
+    if (!ok || !mounted) return;
+    setState(() => _occupe = true);
     try {
-      await SoinsService.cloturer(d, nom);
+      await SoinsService.cloturer(d, _animal?.name ?? 'Ton compagnon');
       await SoinsService.reprogrammerNotifications();
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      if (mounted) _message("La clôture n'a pas abouti, réessaie.");
+      if (mounted) {
+        setState(() => _occupe = false);
+        messageSoin(context, "La clôture n'a pas abouti, réessaie.");
+      }
     }
   }
 
   Future<void> _supprimerDossier() async {
     final d = _dossier;
-    if (d == null) return;
-    final ok = await _confirmer(
-      'Supprimer ce dossier ?',
-      'Le dossier, ses traitements et son suivi seront effacés définitivement.',
+    if (d == null || _occupe) return;
+    final ok = await confirmerSoin(
+      context,
+      'Supprimer définitivement le dossier « ${d.titre} », ses traitements et son suivi ?',
       'Supprimer',
     );
-    if (!ok) return;
+    if (!ok || !mounted) return;
+    setState(() => _occupe = true);
     try {
       await SoinsService.supprimerDossier(d.id);
       await SoinsService.reprogrammerNotifications();
       if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
-      if (mounted) _message("La suppression n'a pas abouti, réessaie.");
+      if (mounted) {
+        setState(() => _occupe = false);
+        messageSoin(context, "La suppression n'a pas abouti, réessaie.");
+      }
     }
   }
 
+  /// Le site copie le résumé ; l'application le partage (message, e-mail…
+  /// ou copie depuis la feuille de partage du téléphone). Le texte est
+  /// celui du site, mot pour mot.
   Future<void> _partager() async {
     final d = _dossier;
+    if (d == null) return;
     final pet = _animal;
-    if (d == null || pet == null) return;
-    final texte = SoinsService.resumePourVeto(_etat, d, pet);
-    await Share.share(texte, subject: 'Suivi de ${pet.name} — ${d.titre}');
+    final nom = pet?.name ?? 'Ton compagnon';
+    final texte = soinsResume(_etat, d, nom, pet, DateTime.now());
+    await Share.share(texte, subject: 'Suivi de $nom — ${d.titre}');
+  }
+
+  /// « En parler à Tyto » : retour au chat, en demandant l'animal du dossier.
+  void _enParlerATyto() {
+    final d = _dossier;
+    if (d == null) return;
+    soinsDemandeChat.value = d.petId;
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   // ---------- Morceaux d'écran ----------
 
-  Widget _carte({required Widget enfant, Color? bord}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: TytoColors.nuit2,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: (bord ?? TytoColors.lune).withOpacity(bord == null ? 0.08 : 0.5)),
-      ),
-      child: enfant,
-    );
-  }
+  /// Un traitement : carte blanche, bord encre à 12 %, rayon 10, padding
+  /// 10 x 12 ; nom, dose et rythme, période, progression, prises cochées.
+  Widget _carteTraitement(SoinTraitement t, SoinDossier d) {
+    final obs = soinsStats(_etat, t, DateTime.now());
+    final fini = t.termine;
+    final dose = t.dose?.trim() ?? '';
+    final remarque = t.notes?.trim() ?? '';
+    final prisesDuJour = d.clos
+        ? <SoinOccurrence>[]
+        : _etat.occurrencesLe(aujourdhui(), dossierId: d.id).where((o) => o.traitement.id == t.id).toList();
+    final total = t.joursTotal;
 
-  Widget _entete(SoinDossier d, String nom) {
-    return _carte(
-      enfant: Column(
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: encreA(0x1f)),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(d.titre, style: TytoText.display(size: 22)),
-          const SizedBox(height: 4),
-          Text(
-            d.clos
-                ? '$nom · du ${jourLong(d.debut)} au ${jourLong(d.cloture ?? d.debut)}'
-                : '$nom · jour ${d.jourNumero} · depuis le ${jourLong(d.debut)}',
-            style: TytoText.ui(size: 13, color: TytoColors.brume),
+          Text.rich(
+            TextSpan(
+              text: t.nom,
+              children: [
+                if (fini) TextSpan(text: ' (terminé)', style: TytoText.ui(size: 14.5, color: encreA(0x99))),
+              ],
+            ),
+            style: TytoText.ui(size: 14.5, weight: FontWeight.w700, color: TytoColors.encre),
           ),
-          if (d.notes != null && d.notes!.trim().isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(d.notes!.trim(), style: TytoText.body(size: 14.5, color: TytoColors.lune.withOpacity(0.85))),
-          ],
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              '${dose.isNotEmpty ? '$dose · ' : ''}${soinsRythmeTexte(t.tousLesJours, t.heures)}',
+              style: TytoText.ui(size: 12.5, color: encreA(0xb3)),
+            ),
+          ),
+          Text(soinsPeriodeTexte(t.debut, t.fin), style: TytoText.ui(size: 12.5, color: encreA(0xb3))),
+          if (remarque.isNotEmpty) Text(remarque, style: TytoText.ui(size: 12.5, color: encreA(0xb3))),
+          if (t.fin != null && total > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 7),
+              child: ProgressionSoin(ratio: t.jourCourant / total),
+            ),
+          if (obs.prevues > 0)
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Text(
+                'Prises cochées : ${obs.faites} sur ${obs.prevues}',
+                style: TytoText.ui(size: 12.5, color: TytoColors.encre),
+              ),
+            ),
+          // Propre à l'application : les prises du jour de ce traitement,
+          // à cocher depuis le dossier (mêmes lignes que « Aujourd'hui »).
+          if (prisesDuJour.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Column(
+                children: [
+                  for (final o in prisesDuJour)
+                    LignePriseSoin(
+                      occurrence: o,
+                      trait: true,
+                      onFait: () => _pointer(o),
+                      onPasser: () => _pointer(o, sauter: true),
+                      onAnnuler: () => _annuler(o),
+                    ),
+                ],
+              ),
+            ),
+          if (!d.clos)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  BoutonDiscretSoin('Modifier', onTap: () => _modifierTraitement(t)),
+                  if (!fini) BoutonDiscretSoin('Arrêter', onTap: () => _arreter(t)),
+                  BoutonDiscretSoin('Supprimer', onTap: () => _supprimer(t)),
+                ],
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _alerte(SoinAlerte a) {
-    final couleur = a.grave ? TytoColors.urgence : TytoColors.fauve;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: couleur.withOpacity(0.13),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: couleur.withOpacity(0.55)),
-      ),
+  /// Une ligne d'« Évolution » : date (76 px au moins), état en couleur,
+  /// puis la note.
+  Widget _ligneEvolution(SoinSuivi s) {
+    final note = s.note?.trim() ?? '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: couleur),
-          const SizedBox(width: 10),
-          Expanded(child: Text(a.texte, style: TytoText.ui(size: 13.5, color: TytoColors.lune).copyWith(height: 1.4))),
-        ],
-      ),
-    );
-  }
-
-  Widget _boutonSuivi(String etat, SoinSuivi? actuel) {
-    final on = actuel?.etat == etat;
-    final couleur = couleurSuivi(etat);
-    return Expanded(
-      child: GestureDetector(
-        onTap: _envoiSuivi ? null : () => _suivi(etat),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          decoration: BoxDecoration(
-            color: on ? couleur.withOpacity(0.2) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: on ? couleur : TytoColors.lune.withOpacity(0.15)),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 76),
+            child: Text(soinsJourCourt(s.jour), style: TytoText.ui(size: 13.5, color: encreA(0x99))),
           ),
-          child: Column(
-            children: [
-              Icon(iconeSuivi(etat), size: 24, color: on ? couleur : TytoColors.brume),
-              const SizedBox(height: 4),
-              Text(
-                libelleSuivi(etat),
-                style: TytoText.ui(
-                  size: 12.5,
-                  weight: on ? FontWeight.w700 : FontWeight.w500,
-                  color: on ? couleur : TytoColors.brume,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _suiviDuJour(SoinDossier d, String nom) {
-    final actuel = _etat.suiviLe(d.id, aujourdhui());
-    return _carte(
-      enfant: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Comment va $nom aujourd'hui ?", style: TytoText.ui(size: 15, weight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _boutonSuivi('better', actuel),
-              const SizedBox(width: 8),
-              _boutonSuivi('same', actuel),
-              const SizedBox(width: 8),
-              _boutonSuivi('worse', actuel),
-            ],
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _note,
-            maxLines: 2,
-            textCapitalization: TextCapitalization.sentences,
-            style: TytoText.ui(color: TytoColors.lune),
-            decoration: InputDecoration(
-              hintText: 'Une précision (œil moins rouge, mange moins…)',
-              hintStyle: TytoText.ui(size: 13, color: TytoColors.brume),
-              filled: true,
-              fillColor: TytoColors.nuit,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-            ),
-          ),
-          const SizedBox(height: 6),
+          const SizedBox(width: 8),
           Text(
-            actuel == null
-                ? "Choisis une option : la précision est enregistrée avec."
-                : 'Enregistré. Touche une option pour mettre à jour avec la précision ci-dessus.',
-            style: TytoText.ui(size: 11.5, color: TytoColors.brume),
+            libelleSuivi(s.etat),
+            style: TytoText.ui(size: 13.5, weight: FontWeight.w700, color: couleurSuiviTexte(s.etat)),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _carteTraitement(SoinTraitement t, SoinDossier d, String nom) {
-    final obs = _etat.observance(t, DateTime.now());
-    final prisesDuJour = _etat.occurrencesLe(aujourdhui(), dossierId: d.id).where((o) => o.traitement.id == t.id).toList();
-
-    String? etatPeriode;
-    double? progression;
-    if (t.pasCommence) {
-      etatPeriode = 'Commence le ${jourLong(t.debut)}';
-    } else if (t.termine) {
-      etatPeriode = 'Traitement terminé';
-      progression = 1.0;
-    } else if (t.fin != null) {
-      etatPeriode = 'Jour ${t.jourCourant} sur ${t.joursTotal}';
-      progression = t.joursTotal == 0 ? null : t.jourCourant / t.joursTotal;
-    } else {
-      etatPeriode = 'Jour ${t.jourCourant}, sans date de fin';
-    }
-
-    return _carte(
-      enfant: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t.nom, style: TytoText.ui(size: 16, weight: FontWeight.w700)),
-                    if (t.dose != null && t.dose!.trim().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 2),
-                        child: Text(t.dose!.trim(), style: TytoText.ui(size: 13.5, color: TytoColors.lune.withOpacity(0.85))),
-                      ),
-                    const SizedBox(height: 3),
-                    Text(t.rythme, style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
-                    Text(periodeTexte(t.debut, t.fin), style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
-                    if (t.notes != null && t.notes!.trim().isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 3),
-                        child: Text(t.notes!.trim(), style: TytoText.ui(size: 12.5, color: TytoColors.brume)),
-                      ),
-                  ],
-                ),
-              ),
-              if (!d.clos)
-                PopupMenuButton<String>(
-                  color: TytoColors.nuit2,
-                  icon: const Icon(Icons.more_vert_rounded, color: TytoColors.brume),
-                  onSelected: (v) {
-                    if (v == 'modifier') _modifierTraitement(t);
-                    if (v == 'arreter') _arreter(t);
-                    if (v == 'supprimer') _supprimer(t);
-                  },
-                  itemBuilder: (_) => [
-                    PopupMenuItem(value: 'modifier', child: Text('Modifier', style: TytoText.ui())),
-                    if (!t.termine) PopupMenuItem(value: 'arreter', child: Text('Arrêter le traitement', style: TytoText.ui())),
-                    PopupMenuItem(value: 'supprimer', child: Text('Supprimer', style: TytoText.ui(color: TytoColors.urgence))),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(etatPeriode, style: TytoText.ui(size: 12.5, weight: FontWeight.w700, color: TytoColors.fauve)),
-          if (progression != null) ...[
-            const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: progression.clamp(0.0, 1.0),
-                minHeight: 6,
-                color: TytoColors.fauve,
-                backgroundColor: TytoColors.lune.withOpacity(0.1),
-              ),
+          if (note.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text('— $note', style: TytoText.ui(size: 13.5, color: encreA(0xb3))),
             ),
-          ],
-          if (obs.prevues > 0) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Prises cochées : ${obs.faites} sur ${obs.prevues}',
-              style: TytoText.ui(size: 12, color: TytoColors.brume),
-            ),
-          ],
-          if (!d.clos && prisesDuJour.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            for (final o in prisesDuJour)
-              LignePriseSoin(
-                occurrence: o,
-                onFait: () => _pointer(o),
-                onPasser: () => _pointer(o, sauter: true),
-                onAnnuler: () => _annuler(o),
-              ),
           ],
         ],
       ),
-    );
-  }
-
-  Widget _historique(SoinDossier d) {
-    final liste = _etat.suivisDe(d.id).take(14).toList();
-    if (liste.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        titreSection('Évolution'),
-        _carte(
-          enfant: Column(
-            children: [
-              for (final s in liste)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 5),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(iconeSuivi(s.etat), size: 20, color: couleurSuivi(s.etat)),
-                      const SizedBox(width: 10),
-                      SizedBox(
-                        width: 46,
-                        child: Text(jourCourt(s.jour), style: TytoText.ui(size: 13, weight: FontWeight.w700)),
-                      ),
-                      Expanded(
-                        child: Text(
-                          (s.note != null && s.note!.trim().isNotEmpty) ? '${s.libelle} — ${s.note!.trim()}' : s.libelle,
-                          style: TytoText.ui(size: 13, color: TytoColors.lune.withOpacity(0.85)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
   Widget _contenu(SoinDossier d) {
-    final nom = _animal?.name ?? 'ton compagnon';
+    final nom = _animal?.name ?? 'Ton compagnon';
     final traitements = _etat.traitementsDe(d.id);
+    final suivis = _etat.suivisDe(d.id);
+    final dixSuivis = suivis.take(10).toList();
     final alerte = _etat.alerte(d, nom);
+    final actuel = _etat.suiviLe(d.id, aujourdhui());
+    final notes = d.notes?.trim() ?? '';
+    final noteDuJour = actuel?.note?.trim() ?? '';
+
+    // Les marges du site se fondent entre blocs (ex. 8 px sous les notes
+    // et 4 px au-dessus de l'étiquette donnent 8 px) : les valeurs
+    // ci-dessous en tiennent compte.
+    final corps = <Widget>[
+      if (notes.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Text(notes, style: TytoText.body(size: 14.5, color: TytoColors.encre)),
+        ),
+      if (!d.clos) ...[
+        EtiquetteSoin("Comment va $nom aujourd'hui ?", haut: notes.isNotEmpty ? 0 : 4),
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: [
+            for (final e in etatsSuivi)
+              PastilleSoin(
+                texte: libelleSuivi(e),
+                actif: actuel?.etat == e,
+                couleur: couleurSuivi(e),
+                onTap: () => _suivi(e),
+              ),
+          ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: ChampSoin(
+            controller: _note,
+            indication: noteDuJour.isNotEmpty ? noteDuJour : 'Une note (appétit, œil moins rouge…)',
+            onChanged: (_) => setState(() {}),
+          ),
+        ),
+        if (_note.text.trim().isNotEmpty && actuel != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: BoutonDiscretSoin('Enregistrer la note', onTap: _enregistrerNote),
+          ),
+      ],
+      // Dossier clos (propre à l'application) : « Traitements » ouvre le
+      // bloc, avec les 4 px de la première étiquette du site.
+      EtiquetteSoin('Traitements', haut: d.clos ? 4 : 12),
+      if (traitements.isEmpty)
+        Text(
+          d.clos
+              ? 'Aucun traitement enregistré.'
+              : "Aucun traitement. Ajoute-en un pour avoir les rappels dans l'application.",
+          style: TytoText.ui(size: 13, color: encreA(0x99)),
+        ),
+      for (final t in traitements) _carteTraitement(t, d),
+      if (!d.clos) BoutonDiscretSoin('Ajouter un traitement', onTap: _ajouterTraitement),
+      if (dixSuivis.isNotEmpty) ...[
+        EtiquetteSoin('Évolution', haut: (d.clos && traitements.isNotEmpty) ? 4 : 12),
+        for (final s in dixSuivis) _ligneEvolution(s),
+      ],
+      Padding(
+        padding: EdgeInsets.only(top: (d.clos && dixSuivis.isEmpty && traitements.isNotEmpty) ? 8 : 16),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            BoutonOrSoin('Partager le résumé pour le vétérinaire', onTap: _partager),
+            BoutonDiscretSoin('En parler à Tyto', onTap: _enParlerATyto),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (!d.clos) BoutonDiscretSoin('Clôturer le dossier', onTap: _cloturer),
+            BoutonDiscretSoin('Supprimer le dossier', onTap: _supprimerDossier),
+          ],
+        ),
+      ),
+    ];
 
     return RefreshIndicator(
       color: TytoColors.fauve,
       backgroundColor: TytoColors.nuit2,
       onRefresh: () => _charger(silencieux: true),
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
         children: [
-          _entete(d, nom),
-          if (alerte != null) _alerte(alerte),
-          if (!d.clos) _suiviDuJour(d, nom),
-          titreSection('Traitements'),
-          if (traitements.isEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 2, bottom: 8),
-              child: Text(
-                'Aucun traitement dans ce dossier. Ajoute-en un pour être rappelé à chaque prise.',
-                style: TytoText.body(size: 14.5, color: TytoColors.brume),
-              ),
-            ),
-          for (final t in traitements) _carteTraitement(t, d, nom),
-          if (!d.clos)
-            OutlinedButton.icon(
-              onPressed: _ajouterTraitement,
-              icon: const Icon(Icons.add_rounded, size: 18, color: TytoColors.fauve),
-              label: Text('Ajouter un traitement', style: TytoText.ui(size: 14, color: TytoColors.fauve)),
-              style: OutlinedButton.styleFrom(
-                side: BorderSide(color: TytoColors.fauve.withOpacity(0.55)),
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          _historique(d),
-          titreSection('Pour le vétérinaire'),
-          OutlinedButton.icon(
-            onPressed: _partager,
-            icon: const Icon(Icons.ios_share_rounded, size: 18, color: TytoColors.lune),
-            label: Text('Partager le résumé du suivi', style: TytoText.ui(size: 14, color: TytoColors.lune)),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: TytoColors.lune.withOpacity(0.25)),
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          CarteSoin(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Toucher l'en-tête replie le dossier, comme sur le site :
+                // ici, cela ramène à la liste.
+                EnteteDossierSoin(
+                  titre: d.titre,
+                  ligne: d.clos ? soinsLigneTermine(d, nom) : soinsLigneDossier(_etat, d, nom),
+                  dernier: suivis.isNotEmpty ? suivis.first : null,
+                  deplie: true,
+                  onTap: () => Navigator.maybePop(context),
+                ),
+                if (alerte != null) ...[
+                  const SizedBox(height: 10),
+                  AlerteSoin(texte: alerte.texte, grave: alerte.grave),
+                ],
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.only(top: 10),
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: encreA(0x1a))),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: corps,
+                  ),
+                ),
+              ],
             ),
           ),
-          if (!d.clos) ...[
-            const SizedBox(height: 22),
-            ElevatedButton(
-              onPressed: _cloturer,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: TytoColors.vert,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text(
-                'Clôturer le dossier',
-                style: TytoText.ui(weight: FontWeight.w700, color: const Color(0xFF0F2A24)),
-              ),
-            ),
-          ],
+          avertissementSoins(),
         ],
       ),
+    );
+  }
+
+  Widget _erreurChargement() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+      children: [
+        CarteSoin(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Soins en cours', style: TytoText.display(size: 19, color: TytoColors.encre)),
+              const SizedBox(height: 6),
+              Text(
+                "Impossible de charger ce dossier pour l'instant. Vérifie ta connexion.",
+                style: TytoText.body(size: 15.5, color: TytoColors.encre).copyWith(height: 1.55),
+              ),
+              const SizedBox(height: 12),
+              BoutonDiscretSoin('Réessayer', onTap: () => _charger()),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -581,56 +498,30 @@ class _SoinDossierScreenState extends State<SoinDossierScreen> {
     final d = _dossier;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: Text('Dossier de soin', style: TytoText.display(size: 19)),
-        actions: [
-          if (d != null)
-            PopupMenuButton<String>(
-              color: TytoColors.nuit2,
-              icon: const Icon(Icons.more_vert_rounded, color: TytoColors.fauve),
-              onSelected: (v) {
-                if (v == 'supprimer') _supprimerDossier();
-              },
-              itemBuilder: (_) => [
-                PopupMenuItem(
-                  value: 'supprimer',
-                  child: Text('Supprimer le dossier', style: TytoText.ui(color: TytoColors.urgence)),
-                ),
-              ],
-            ),
+      appBar: AppBar(title: Text('Soins en cours', style: TytoText.display(size: 19))),
+      body: Stack(
+        children: [
+          // Les empreintes qui traversent le fond, comme sur tout le site.
+          const Positioned.fill(child: PawTrails()),
+          Positioned.fill(
+            child: _chargement
+                ? ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                    children: [chargementSoins()],
+                  )
+                : _erreur
+                    ? _erreurChargement()
+                    : d == null
+                        ? ListView(
+                            padding: const EdgeInsets.fromLTRB(20, 32, 20, 24),
+                            children: [
+                              Text("Ce dossier n'existe plus.", style: TytoText.ui(size: 14, color: TytoColors.brume)),
+                            ],
+                          )
+                        : _contenu(d),
+          ),
         ],
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: TytoColors.fauve))
-          : _erreur
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(28),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          "Impossible de charger ce dossier pour l'instant. Vérifie ta connexion.",
-                          textAlign: TextAlign.center,
-                          style: TytoText.body(size: 14.5, color: TytoColors.brume),
-                        ),
-                        const SizedBox(height: 14),
-                        OutlinedButton(
-                          onPressed: _charger,
-                          child: Text('Réessayer', style: TytoText.ui(color: TytoColors.fauve)),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : d == null
-                  ? Center(
-                      child: Text(
-                        'Ce dossier n\'existe plus.',
-                        style: TytoText.body(size: 14.5, color: TytoColors.brume),
-                      ),
-                    )
-                  : _contenu(d),
     );
   }
 }

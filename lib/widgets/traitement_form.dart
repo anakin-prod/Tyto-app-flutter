@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../models/soin.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
+import 'fenetre_papier.dart';
 import 'soin_widgets.dart';
 
-/// Ouvre le formulaire d'un traitement (nom, dose, heures, rythme, durée).
-/// Retourne le traitement saisi, ou null si l'on a fermé sans valider.
+/// Ouvre le formulaire d'un traitement (FormTraitement du site : nom,
+/// dose, heures, rythme, début, durée, remarque). Retourne le traitement
+/// saisi, ou null si l'on a fermé sans valider.
 Future<NouveauTraitement?> ouvrirFormulaireTraitement(
   BuildContext context, {
   NouveauTraitement? initial,
@@ -13,23 +15,27 @@ Future<NouveauTraitement?> ouvrirFormulaireTraitement(
   return showModalBottomSheet<NouveauTraitement>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
+    barrierColor: const Color(0xCC0A0E18),
     builder: (_) => _TraitementForm(initial: initial),
   );
 }
 
 const _dureesRapides = [3, 5, 7, 10, 14, 21, 30];
 
+// HEURES_RAPIDES du site.
 const _heuresRapides = [
-  ['Matin', '08:00'],
-  ['Midi', '12:00'],
-  ['Soir', '20:00'],
-  ['Coucher', '21:00'],
+  ['08:00', 'Matin'],
+  ['12:00', 'Midi'],
+  ['20:00', 'Soir'],
+  ['21:00', 'Coucher'],
 ];
 
+// RYTHMES du site.
 const _rythmes = [
   [1, 'Tous les jours'],
-  [2, 'Un jour sur 2'],
+  [2, '1 jour sur 2'],
   [3, 'Tous les 3 jours'],
   [7, 'Chaque semaine'],
 ];
@@ -47,44 +53,39 @@ class _TraitementFormState extends State<_TraitementForm> {
   final _dose = TextEditingController();
   final _notes = TextEditingController();
   final List<String> _heures = [];
+  String? _autre; // l'heure choisie dans le champ, pas encore ajoutée
   int _pas = 1;
-  int? _jours = 7; // durée rapide choisie ; null = pas de durée rapide
-  DateTime? _finPerso; // date de fin choisie à la main
-  String _debutChoix = 'auj'; // 'auj' | 'demain' | 'perso'
-  DateTime _debut = aujourdhui();
+  String _debutChoix = 'auj'; // 'auj' | 'demain' | 'date'
+  DateTime _debutDate = aujourdhui();
+  String _dureeChoix = '7'; // un nombre de jours, 'infini' ou 'date'
+  DateTime _finDate = aujourdhui().add(const Duration(days: 6));
   String? _erreur;
 
   @override
   void initState() {
     super.initState();
     final t = widget.initial;
-    if (t == null) return;
+    if (t == null) {
+      // Comme sur le site : 21 h est proposé d'office.
+      _heures.add('21:00');
+      return;
+    }
     _nom.text = t.nom;
     _dose.text = t.dose ?? '';
     _notes.text = t.notes ?? '';
     _heures.addAll(t.heures);
+    _heures.sort();
     _pas = t.tousLesJours;
-    _debut = t.debut;
-    final auj = aujourdhui();
-    if (_debut == auj) {
-      _debutChoix = 'auj';
-    } else if (_debut == auj.add(const Duration(days: 1))) {
-      _debutChoix = 'demain';
+    // Comme sur le site : en modification, les dates sont montrées telles
+    // quelles (« Autre date » et « Jusqu'au… » ou « Sans fin »).
+    _debutChoix = 'date';
+    _debutDate = t.debut;
+    final fin = t.fin;
+    if (fin != null) {
+      _dureeChoix = 'date';
+      _finDate = fin;
     } else {
-      _debutChoix = 'perso';
-    }
-    if (t.fin == null) {
-      _jours = null;
-      _finPerso = null;
-    } else {
-      final n = t.fin!.difference(t.debut).inDays + 1;
-      if (_dureesRapides.contains(n)) {
-        _jours = n;
-        _finPerso = null;
-      } else {
-        _jours = null;
-        _finPerso = t.fin;
-      }
+      _dureeChoix = 'infini';
     }
   }
 
@@ -99,7 +100,7 @@ class _TraitementFormState extends State<_TraitementForm> {
   String _format(TimeOfDay t) =>
       '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
-  void _basculerHeure(String h) {
+  void _basculer(String h) {
     setState(() {
       if (_heures.contains(h)) {
         _heures.remove(h);
@@ -107,28 +108,35 @@ class _TraitementFormState extends State<_TraitementForm> {
         _heures.add(h);
         _heures.sort();
       }
-      _erreur = null;
     });
   }
 
-  Future<void> _autreHeure() async {
+  Future<void> _choisirHeure() async {
+    final morceaux = (_autre ?? '21:00').split(':');
     final choisie = await showTimePicker(
       context: context,
-      initialTime: const TimeOfDay(hour: 21, minute: 0),
+      initialTime: TimeOfDay(
+        hour: int.tryParse(morceaux.first) ?? 21,
+        minute: morceaux.length > 1 ? (int.tryParse(morceaux[1]) ?? 0) : 0,
+      ),
       builder: (ctx, child) => MediaQuery(
         data: MediaQuery.of(ctx).copyWith(alwaysUse24HourFormat: true),
         child: child ?? const SizedBox.shrink(),
       ),
     );
-    if (choisie == null) return;
-    final h = _format(choisie);
-    if (!_heures.contains(h)) {
-      setState(() {
+    if (choisie == null || !mounted) return;
+    setState(() => _autre = _format(choisie));
+  }
+
+  void _ajouterHeure() {
+    final h = _autre;
+    setState(() {
+      if (h != null && !_heures.contains(h)) {
         _heures.add(h);
         _heures.sort();
-        _erreur = null;
-      });
-    }
+      }
+      _autre = null;
+    });
   }
 
   Future<DateTime?> _choisirDate(DateTime depart) async {
@@ -142,265 +150,213 @@ class _TraitementFormState extends State<_TraitementForm> {
     return jourSeul(d);
   }
 
-  DateTime? _calculerFin() {
-    if (_finPerso != null) return _finPerso;
-    if (_jours == null) return null;
-    return _debut.add(Duration(days: _jours! - 1));
-  }
-
   void _valider() {
     final nom = _nom.text.trim();
     if (nom.isEmpty) {
-      setState(() => _erreur = 'Donne un nom au traitement, par exemple « Gouttes oculaires ».');
+      setState(() => _erreur = 'Indique le nom du traitement, par exemple « Gouttes oculaires ».');
       return;
     }
     if (_heures.isEmpty) {
-      setState(() => _erreur = 'Ajoute au moins une heure de prise.');
+      setState(() => _erreur = 'Choisis au moins une heure de prise.');
       return;
     }
-    final fin = _calculerFin();
-    if (fin != null && fin.isBefore(_debut)) {
-      setState(() => _erreur = 'La date de fin est avant le début du traitement.');
+    final auj = aujourdhui();
+    final debut = _debutChoix == 'auj'
+        ? auj
+        : _debutChoix == 'demain'
+            ? auj.add(const Duration(days: 1))
+            : _debutDate;
+    DateTime? fin;
+    if (_dureeChoix == 'date') {
+      fin = _finDate;
+    } else if (_dureeChoix != 'infini') {
+      final n = int.tryParse(_dureeChoix) ?? 7;
+      fin = debut.add(Duration(days: n - 1));
+    }
+    if (fin != null && fin.isBefore(debut)) {
+      setState(() => _erreur = 'La date de fin est avant le début.');
       return;
     }
+    final heures = List<String>.from(_heures)..sort();
     Navigator.pop(
       context,
       NouveauTraitement(
         nom: nom,
         dose: _dose.text.trim().isEmpty ? null : _dose.text.trim(),
-        heures: List<String>.from(_heures),
+        heures: heures,
         tousLesJours: _pas,
-        debut: _debut,
+        debut: debut,
         fin: fin,
         notes: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       ),
     );
   }
 
+  Widget _pastilles(List<Widget> enfants) {
+    return Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: enfants,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final fin = _calculerFin();
+    final rapides = _heuresRapides.map((x) => x[0]).toList();
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         decoration: const BoxDecoration(
           color: TytoColors.papier,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
         ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: TytoColors.encre.withOpacity(0.25),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            // Le cadre blanc du formulaire du site : bord encre à 15 %,
+            // rayon 12, padding 6 14 14.
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: encreA(0x26)),
               ),
-              const SizedBox(height: 18),
-              Text(
-                widget.initial == null ? 'Ajouter un traitement' : 'Modifier le traitement',
-                style: TytoText.display(size: 19, color: TytoColors.encre),
-              ),
-              const SizedBox(height: 18),
-
-              etiquettePapier('Traitement'),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _nom,
-                textCapitalization: TextCapitalization.sentences,
-                style: TytoText.ui(color: TytoColors.encre),
-                decoration: decPapier('Gouttes oculaires, comprimé, pommade…'),
-              ),
-              const SizedBox(height: 14),
-
-              etiquettePapier('Dose (facultatif)'),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _dose,
-                style: TytoText.ui(color: TytoColors.encre),
-                decoration: decPapier('1 goutte par œil, 1/2 comprimé…'),
-              ),
-              const SizedBox(height: 16),
-
-              etiquettePapier('À quelle heure ?'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (final h in _heuresRapides)
-                    PastillePapier(
-                      texte: '${h[0]} ${h[1]}',
-                      actif: _heures.contains(h[1]),
-                      onTap: () => _basculerHeure(h[1]),
-                    ),
-                  PastillePapier(
-                    texte: 'Autre heure',
-                    icone: Icons.access_time_rounded,
-                    actif: false,
-                    onTap: _autreHeure,
-                  ),
-                ],
-              ),
-              if (_heures.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 6,
-                  children: [
-                    for (final h in _heures)
-                      Chip(
-                        label: Text(h, style: TytoText.ui(size: 13.5, weight: FontWeight.w700, color: TytoColors.encre)),
-                        backgroundColor: Colors.white,
-                        side: BorderSide(color: TytoColors.fauve.withOpacity(0.6)),
-                        deleteIcon: Icon(Icons.close_rounded, size: 16, color: TytoColors.encre.withOpacity(0.6)),
-                        onDeleted: () => _basculerHeure(h),
+                  const EtiquetteSoin('Traitement'),
+                  ChampSoin(controller: _nom, indication: 'Gouttes oculaires, comprimé…'),
+                  const EtiquetteSoin('Dose (facultatif)'),
+                  ChampSoin(controller: _dose, indication: '1 goutte par œil, 1/2 comprimé…'),
+
+                  const EtiquetteSoin('À quelle heure ?'),
+                  _pastilles([
+                    for (final x in _heuresRapides)
+                      PastilleSoin(
+                        texte: '${x[1]} · ${soinsHeureTexte(x[0])}',
+                        actif: _heures.contains(x[0]),
+                        onTap: () => _basculer(x[0]),
                       ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 16),
-
-              etiquettePapier('Rythme'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final r in _rythmes)
-                    PastillePapier(
-                      texte: r[1] as String,
-                      actif: _pas == (r[0] as int),
-                      onTap: () => setState(() => _pas = r[0] as int),
+                    for (final h in _heures.where((h) => !rapides.contains(h)))
+                      PastilleSoin(
+                        texte: '${soinsHeureTexte(h)} ×',
+                        actif: true,
+                        onTap: () => _basculer(h),
+                      ),
+                  ]),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: [
+                        ChampChoixSoin(
+                          texte: _autre ?? '--:--',
+                          largeur: 130,
+                          hauteur: 41.2,
+                          heure: true,
+                          onTap: _choisirHeure,
+                        ),
+                        const SizedBox(width: 8),
+                        BoutonDiscretSoin('Ajouter cette heure', onTap: _ajouterHeure),
+                      ],
                     ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                  ),
 
-              etiquettePapier('Début'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  PastillePapier(
-                    texte: "Aujourd'hui",
-                    actif: _debutChoix == 'auj',
-                    onTap: () => setState(() {
-                      _debutChoix = 'auj';
-                      _debut = aujourdhui();
-                    }),
-                  ),
-                  PastillePapier(
-                    texte: 'Demain',
-                    actif: _debutChoix == 'demain',
-                    onTap: () => setState(() {
-                      _debutChoix = 'demain';
-                      _debut = aujourdhui().add(const Duration(days: 1));
-                    }),
-                  ),
-                  PastillePapier(
-                    texte: _debutChoix == 'perso' ? 'Le ${jourLong(_debut)}' : 'Autre date',
-                    icone: Icons.event_rounded,
-                    actif: _debutChoix == 'perso',
-                    onTap: () async {
-                      final d = await _choisirDate(_debut);
-                      if (d == null) return;
-                      setState(() {
-                        _debutChoix = 'perso';
-                        _debut = d;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                  const EtiquetteSoin('Rythme'),
+                  _pastilles([
+                    for (final r in _rythmes)
+                      PastilleSoin(
+                        texte: r[1] as String,
+                        actif: _pas == (r[0] as int),
+                        onTap: () => setState(() => _pas = r[0] as int),
+                      ),
+                  ]),
 
-              etiquettePapier('Pendant combien de temps ?'),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final n in _dureesRapides)
-                    PastillePapier(
-                      texte: '$n jours',
-                      actif: _finPerso == null && _jours == n,
-                      onTap: () => setState(() {
-                        _jours = n;
-                        _finPerso = null;
-                      }),
+                  const EtiquetteSoin('Début'),
+                  _pastilles([
+                    PastilleSoin(
+                      texte: "Aujourd'hui",
+                      actif: _debutChoix == 'auj',
+                      onTap: () => setState(() => _debutChoix = 'auj'),
                     ),
-                  PastillePapier(
-                    texte: 'Sans fin',
-                    actif: _finPerso == null && _jours == null,
-                    onTap: () => setState(() {
-                      _jours = null;
-                      _finPerso = null;
-                    }),
-                  ),
-                  PastillePapier(
-                    texte: _finPerso != null ? "Jusqu'au ${jourLong(_finPerso!)}" : 'Date de fin',
-                    icone: Icons.event_available_rounded,
-                    actif: _finPerso != null,
-                    onTap: () async {
-                      final d = await _choisirDate(fin ?? _debut);
-                      if (d == null) return;
-                      setState(() {
-                        _finPerso = d;
-                        _jours = null;
-                      });
-                    },
+                    PastilleSoin(
+                      texte: 'Demain',
+                      actif: _debutChoix == 'demain',
+                      onTap: () => setState(() => _debutChoix = 'demain'),
+                    ),
+                    PastilleSoin(
+                      texte: 'Autre date',
+                      actif: _debutChoix == 'date',
+                      onTap: () => setState(() => _debutChoix = 'date'),
+                    ),
+                    if (_debutChoix == 'date')
+                      ChampChoixSoin(
+                        texte: jourLong(_debutDate),
+                        largeur: 160,
+                        hauteur: 39,
+                        heure: false,
+                        onTap: () async {
+                          final d = await _choisirDate(_debutDate);
+                          if (d == null || !mounted) return;
+                          setState(() => _debutDate = d);
+                        },
+                      ),
+                  ]),
+
+                  const EtiquetteSoin('Durée'),
+                  _pastilles([
+                    for (final n in _dureesRapides)
+                      PastilleSoin(
+                        texte: '$n jours',
+                        actif: _dureeChoix == '$n',
+                        onTap: () => setState(() => _dureeChoix = '$n'),
+                      ),
+                    PastilleSoin(
+                      texte: 'Sans fin',
+                      actif: _dureeChoix == 'infini',
+                      onTap: () => setState(() => _dureeChoix = 'infini'),
+                    ),
+                    PastilleSoin(
+                      texte: "Jusqu'au…",
+                      actif: _dureeChoix == 'date',
+                      onTap: () => setState(() => _dureeChoix = 'date'),
+                    ),
+                    if (_dureeChoix == 'date')
+                      ChampChoixSoin(
+                        texte: jourLong(_finDate),
+                        largeur: 160,
+                        hauteur: 39,
+                        heure: false,
+                        onTap: () async {
+                          final d = await _choisirDate(_finDate);
+                          if (d == null || !mounted) return;
+                          setState(() => _finDate = d);
+                        },
+                      ),
+                  ]),
+
+                  const EtiquetteSoin('Remarque (facultatif)'),
+                  ChampSoin(controller: _notes, indication: 'À donner pendant le repas…'),
+
+                  if (_erreur != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Text(_erreur!, style: TytoText.ui(size: 13, color: TytoColors.urgence)),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 14),
+                    child: rangeeBoutonsSoin([
+                      BoutonOrSoin('Valider', onTap: _valider),
+                      BoutonDiscretSoin('Annuler', onTap: () => Navigator.pop(context)),
+                    ]),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
-              Text(
-                fin == null
-                    ? "Le traitement continue jusqu'à ce que tu l'arrêtes."
-                    : 'Dernier jour : ${jourLong(fin)}.',
-                style: TytoText.ui(size: 12, color: TytoColors.encre.withOpacity(0.6)),
-              ),
-              const SizedBox(height: 16),
-
-              etiquettePapier('Précisions (facultatif)'),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _notes,
-                maxLines: 2,
-                textCapitalization: TextCapitalization.sentences,
-                style: TytoText.ui(color: TytoColors.encre),
-                decoration: decPapier('Pendant le repas, à jeun, bien agiter…'),
-              ),
-
-              if (_erreur != null) ...[
-                const SizedBox(height: 12),
-                Text(_erreur!, style: TytoText.ui(size: 13, color: TytoColors.urgence)),
-              ],
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _valider,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: TytoColors.fauve,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  ),
-                  child: Text(
-                    widget.initial == null ? 'Ajouter' : 'Enregistrer',
-                    style: TytoText.ui(weight: FontWeight.w700, color: TytoColors.nuit),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),

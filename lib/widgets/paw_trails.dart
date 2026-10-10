@@ -170,13 +170,14 @@ class _PawTrailsState extends State<PawTrails> {
   }
 
   /// Les étapes de l'animation « pasEmpreinte » du site :
-  /// 0 % invisible → 18 % visible → 62 % visible → 100 % invisible.
+  /// 0 % invisible → 18 % visible → 62 % visible → 100 % invisible,
+  /// chaque étape en « ease-in-out » comme dans le CSS.
   double _opaciteA(int ageMs) {
     if (ageMs < 0 || ageMs > _dureeMs) return 0;
     final t = ageMs / _dureeMs;
-    if (t < 0.18) return _opacite * (t / 0.18);
+    if (t < 0.18) return _opacite * Curves.easeInOut.transform(t / 0.18);
     if (t < 0.62) return _opacite;
-    return _opacite * (1 - (t - 0.62) / 0.38);
+    return _opacite * (1 - Curves.easeInOut.transform(((t - 0.62) / 0.38).clamp(0.0, 1.0).toDouble()));
   }
 
   @override

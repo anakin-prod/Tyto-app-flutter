@@ -112,9 +112,10 @@ class _VoiceButtonState extends State<VoiceButton> with SingleTickerProviderStat
     return AnimatedBuilder(
       animation: _pulse,
       builder: (context, child) {
-        // Le halo qui respire pendant l'écoute : 0 → 7 px en s'estompant.
+        // Le halo qui respire pendant l'écoute : 0 → 7 px en s'estompant,
+        // avec la courbe « ease » de micPulse entre deux étapes.
         final t = _pulse.value;
-        final p = t < 0.5 ? t * 2 : (1 - t) * 2;
+        final p = t < 0.5 ? Curves.ease.transform(t * 2) : 1 - Curves.ease.transform((t - 0.5) * 2);
         return Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
