@@ -44,6 +44,30 @@ class TytoScrollBehavior extends MaterialScrollBehavior {
   }
 }
 
+/// Une transition de page classique, mais l'écran qui arrive est posé sur un
+/// fond opaque (le même dégradé que le site), pour masquer l'écran précédent.
+class _TransitionOpaque extends PageTransitionsBuilder {
+  final PageTransitionsBuilder base;
+  const _TransitionOpaque(this.base);
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return base.buildTransitions<T>(
+      route,
+      context,
+      animation,
+      secondaryAnimation,
+      TytoBackground(child: child),
+    );
+  }
+}
+
 class TytoApp extends StatelessWidget {
   const TytoApp({super.key});
 
@@ -59,6 +83,13 @@ class TytoApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.transparent,
+        // Les écrans sont transparents (le fond est posé derrière) : sans ça,
+        // l'ancien écran restait visible pendant la transition. Chaque
+        // nouvel écran arrive donc avec son propre fond, opaque.
+        pageTransitionsTheme: const PageTransitionsTheme(builders: {
+          TargetPlatform.iOS: _TransitionOpaque(CupertinoPageTransitionsBuilder()),
+          TargetPlatform.android: _TransitionOpaque(FadeUpwardsPageTransitionsBuilder()),
+        }),
         colorScheme: ColorScheme.dark(
           primary: TytoColors.fauve,
           secondary: TytoColors.fauve,

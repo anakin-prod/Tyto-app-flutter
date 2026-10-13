@@ -24,7 +24,9 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _sending = false;
   bool _linkSent = false;
-  bool _modeMotDePasse = false; // replié par défaut
+  // L'écran s'ouvre sur e-mail + mot de passe ; le lien de connexion par
+  // e-mail reste juste en dessous.
+  bool _modeMotDePasse = true;
   String? _errorMessage;
   StreamSubscription<AuthState>? _sub;
 
@@ -80,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// Connexion directe par mot de passe — sert au compte d'examen Google.
+  /// Connexion par e-mail et mot de passe.
   Future<void> _connexionMotDePasse() async {
     final email = _emailController.text.trim();
     final motDePasse = _passwordController.text;
@@ -296,16 +298,17 @@ class _LoginScreenState extends State<LoginScreen> {
         Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.end,
+          spacing: 16,
+          runSpacing: 8,
           children: [
-            // Le lien reste discret : il ne sert qu'au compte d'examen de
-            // Google, pas aux vrais utilisateurs.
             _lien(
-              _modeMotDePasse ? 'Revenir au lien de connexion' : 'Se connecter avec un mot de passe',
+              _modeMotDePasse ? 'Recevoir un lien de connexion par e-mail' : 'Se connecter avec un mot de passe',
               () => setState(() {
                 _modeMotDePasse = !_modeMotDePasse;
                 _errorMessage = null;
               }),
             ),
+            _lien('Créer un compte', () => FenetreCreerCompte.afficher(context)),
             // L'écran s'ouvre par-dessus Tyto : on peut y revenir sans se connecter.
             if (retour)
               Padding(

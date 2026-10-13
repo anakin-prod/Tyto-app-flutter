@@ -59,6 +59,9 @@ class FenetreCreerCompte extends StatefulWidget {
 
 class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
   final _email = TextEditingController();
+  final _motDePasse = TextEditingController();
+  // Par défaut : e-mail + mot de passe. L'autre choix : un simple lien par e-mail.
+  bool _modeLien = false;
   bool _envoi = false;
   bool _envoye = false;
   bool _fermee = false;
@@ -70,6 +73,7 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
     super.initState();
     // Le bouton doré reste pâle tant que le champ est vide.
     _email.addListener(_maj);
+    _motDePasse.addListener(_maj);
     // Dès qu'un vrai compte est ouvert (retour de Google, lien confirmé),
     // la fenêtre n'a plus lieu d'être.
     _sub = AuthService.onAuthStateChange.listen((_) {
@@ -86,7 +90,9 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
   void dispose() {
     _sub?.cancel();
     _email.removeListener(_maj);
+    _motDePasse.removeListener(_maj);
     _email.dispose();
+    _motDePasse.dispose();
     super.dispose();
   }
 
@@ -102,6 +108,11 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
   Future<void> _creer() async {
     final valeur = _email.text.trim();
     if (valeur.isEmpty || _envoi) return;
+    final mdp = _motDePasse.text;
+    if (!_modeLien && mdp.length < 8) {
+      setState(() => _erreur = "Choisis un mot de passe d'au moins 8 caractères.");
+      return;
+    }
     setState(() {
       _envoi = true;
       _erreur = null;
@@ -109,7 +120,7 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
     String? message;
     try {
       await Supabase.instance.client.auth.updateUser(
-        UserAttributes(email: valeur),
+        _modeLien ? UserAttributes(email: valeur) : UserAttributes(email: valeur, password: mdp),
         emailRedirectTo: _redirection,
       );
     } on AuthException catch (e) {
@@ -165,7 +176,7 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
   TextStyle get _titre => TytoText.display(size: 19, color: TytoColors.encre);
 
   Widget _formulaire() {
-    final vide = _email.text.trim().isEmpty || _envoi;
+    final vide = _email.text.trim().isEmpty || _envoi || (!_modeLien && _motDePasse.text.isEmpty);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -200,6 +211,22 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
           ),
         ),
+        if (!_modeLien) ...[
+          const SizedBox(height: 10),
+          TextField(
+            controller: _motDePasse,
+            obscureText: true,
+            autofillHints: const [AutofillHints.newPassword],
+            style: TytoText.ui(size: 15, weight: FontWeight.w400, color: TytoColors.encre),
+            cursorColor: TytoColors.encre,
+            onSubmitted: (_) => _creer(),
+            decoration: decorationChampPapier(
+              indication: 'Mot de passe (8 caractères min.)',
+              taille: 15,
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+            ),
+          ),
+        ],
         const SizedBox(height: 10),
         BoutonDore(
           texte: _envoi ? 'Envoi…' : 'Créer mon compte gratuit',
@@ -215,6 +242,14 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
           ),
         ],
         const SizedBox(height: 12),
+        LienDiscret(
+          texte: _modeLien ? 'Créer avec un mot de passe' : 'Sans mot de passe : recevoir un lien par e-mail',
+          onTap: () => setState(() {
+            _modeLien = !_modeLien;
+            _erreur = null;
+          }),
+        ),
+        const SizedBox(height: 8),
         LienDiscret(texte: 'Déjà inscrit ? Se connecter', onTap: _seConnecter),
       ],
     );

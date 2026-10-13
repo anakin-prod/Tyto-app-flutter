@@ -10,6 +10,10 @@ class OwlSketch extends StatefulWidget {
   final double size;
   final Color ink;
 
+  /// La couleur des yeux (par défaut la même que le trait). Sert par exemple
+  /// à avoir des yeux dorés sur un logo ivoire.
+  final Color? eyeColor;
+
   /// Les petits détails (perchoir, pattes, plumes). Sur le site, ils sont
   /// affichés par défaut ; on peut les retirer aux très petites tailles.
   final bool detail;
@@ -22,6 +26,7 @@ class OwlSketch extends StatefulWidget {
     super.key,
     this.size = 40,
     this.ink = TytoColors.lune,
+    this.eyeColor,
     this.detail = true,
     this.thinking = false,
   });
@@ -75,6 +80,9 @@ class _OwlSketchState extends State<OwlSketch> with SingleTickerProviderStateMix
   }
 
   String _svg(String hex, double ouverture) {
+    final yeux = widget.eyeColor == null
+        ? hex
+        : '#${widget.eyeColor!.value.toRadixString(16).padLeft(8, '0').substring(2)}';
     final perch = widget.detail
         ? '<path d="M20 145 C40 140.5, 84 141.5, 101 144.5" stroke="$hex" stroke-width="1.6" stroke-linecap="round" opacity="0.65" />'
         : '';
@@ -111,8 +119,8 @@ class _OwlSketchState extends State<OwlSketch> with SingleTickerProviderStateMix
   <path d="M60 26 C50 23, 40 29, 38 41 C36 54, 46 66, 60 74 C74 66, 84 54, 82 41 C80 29, 70 23, 60 26 Z"
         stroke="$hex" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
   <path d="M60 27 L60 52" stroke="$hex" stroke-width="0.9" opacity="0.45" />
-  <ellipse cx="50" cy="45" rx="3.4" ry="${(4.2 * ouverture).toStringAsFixed(2)}" fill="$hex" />
-  <ellipse cx="70" cy="45" rx="3.4" ry="${(4.2 * ouverture).toStringAsFixed(2)}" fill="$hex" />
+  <ellipse cx="50" cy="45" rx="3.4" ry="${(4.2 * ouverture).toStringAsFixed(2)}" fill="$yeux" />
+  <ellipse cx="70" cy="45" rx="3.4" ry="${(4.2 * ouverture).toStringAsFixed(2)}" fill="$yeux" />
   <path d="M60 52 L57.4 59 L60 65 L62.6 59 Z" stroke="$hex" stroke-width="1.1" stroke-linejoin="round" />
   $plumes
   $pattes

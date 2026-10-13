@@ -501,7 +501,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const SizedBox(height: 20),
+            // Le logo aux yeux dorés (qui clignent comme partout), puis le nom
+            // de la fonction, centrés au-dessus des deux choix.
+            const OwlSketch(size: 52, eyeColor: TytoColors.fauve),
             const SizedBox(height: 8),
+            Text("L'œil de Tyto", style: TytoText.display(size: 19, color: TytoColors.lune)),
+            const SizedBox(height: 14),
             ListTile(
               leading: SiteIcon('IconCamera', size: 22, color: TytoColors.lune),
               title: Text('Prendre une photo', style: TytoText.ui(color: TytoColors.lune)),
