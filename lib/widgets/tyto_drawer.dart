@@ -2,19 +2,17 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../theme/colors.dart';
 import '../services/platform_service.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../services/billing_service.dart';
 import '../services/legal_service.dart';
-import 'delete_account_dialog.dart';
-import '../services/notification_service.dart';
 import '../services/achats_service.dart';
 import '../services/user_service.dart';
 import 'compte_fenetre_email.dart';
 import '../screens/team_screen.dart';
+import '../screens/parametres_screen.dart';
 import 'tyto_icons.dart';
 import 'owl_sketch.dart';
 
@@ -52,7 +50,6 @@ const double _margeCadre = 11;
 const double _rayonCadre = 38;
 
 /// Le bas du dégradé du tiroir (#0A0E18 sur le site).
-const _nuitProfonde = Color(0xFF0A0E18);
 
 /// Les apparitions du site : 0,42 s, cubic-bezier(0.22, 1, 0.36, 1).
 const _courbeApparition = Cubic(0.22, 1.0, 0.36, 1.0);
@@ -101,21 +98,10 @@ const _traceDeconnexion =
     '<path d="M15.8 16.4 20.2 12l-4.4-4.4" />'
     '<path d="M20.2 12H9.4" />';
 
-/// Le livre ouvert de « Blog et guides » (tracé en ligne dans page.js, trait 1,7).
-const _traceBlog =
-    '<path d="M4.5 4.5h10a2 2 0 0 1 2 2v13h-10a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2z" />'
-    '<path d="M16.5 8.5h3v9a2 2 0 0 1-2 2M7 9h6M7 12.5h6" />';
-
-const _traceCorbeille = '<path d="M4 6.4h16" />'
-    '<path d="M9.4 6.4V4.6a1 1 0 0 1 1-1h3.2a1 1 0 0 1 1 1v1.8" />'
-    '<path d="M6.2 6.4 7 19.6a1.6 1.6 0 0 0 1.6 1.5h6.8a1.6 1.6 0 0 0 1.6-1.5l.8-13.2" />';
-
-/// La cloche des conseils de saison (propre à l'application), dessinée
-/// dans le même style que les icônes du site.
-const _traceCloche =
-    '<path d="M6.4 16.4V11a5.6 5.6 0 0 1 11.2 0v5.4l1.6 1.8H4.8l1.6-1.8Z" />'
-    '<path d="M10 20.8a2.2 2.2 0 0 0 4 0" />';
-const _traceClocheBarree = '$_traceCloche<path d="M4.2 4.2 19.8 19.8" />';
+/// Les curseurs de « Paramètres ».
+const _traceReglages = '<path d="M4 7h9M17 7h3M4 17h3M11 17h9" />'
+    '<circle cx="15" cy="7" r="2" />'
+    '<circle cx="9" cy="17" r="2" />';
 
 Widget _traceSvg(String trace,
     {required double size, required Color color, double epaisseur = 1.6}) {
@@ -140,7 +126,7 @@ RadialGradient _fondTiroir(Size taille) {
   return RadialGradient(
     center: const Alignment(-0.4, -1.2),
     radius: court > 0 ? rayon / court : 1.0,
-    colors: const [TytoColors.nuit2, TytoColors.nuit, _nuitProfonde],
+    colors: [TytoColors.nuit2, TytoColors.fond, TytoColors.nuitProfonde],
     stops: const [0.0, 0.55, 1.0],
   );
 }
@@ -169,7 +155,6 @@ class TytoDrawer extends StatefulWidget {
 class _TytoDrawerState extends State<TytoDrawer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _entree;
-  bool _saisonActive = true; // les notifications « Conseils de saison »
 
   /// La rubrique sous le doigt : elle s'allume comme au survol sur le site.
   String? _rubriqueAllumee;
@@ -189,9 +174,6 @@ class _TytoDrawerState extends State<TytoDrawer>
       vsync: this,
       duration: const Duration(milliseconds: _dureeSequenceMs),
     )..forward();
-    AlertesSaison.actives().then((v) {
-      if (mounted) setState(() => _saisonActive = v);
-    });
   }
 
   @override
@@ -569,7 +551,7 @@ class _TytoDrawerState extends State<TytoDrawer>
     final nosOffres = _carte(
       icone: TytoIcon.sparkle(size: 16, color: icone),
       label: 'Nos offres',
-      sub: 'Découvrir Premium & Pro',
+      sub: subscribed ? 'Voir les formules' : 'Découvrir Premium & Pro',
       onTap: () {
         Navigator.pop(context);
         if (PlatformInfo.estIOS) {
@@ -618,19 +600,8 @@ class _TytoDrawerState extends State<TytoDrawer>
             ],
           ),
         )
-      else if (!subscribed && offresVisibles)
+      else if (offresVisibles)
         _encadre(nosOffres),
-      // Le blog : pour tout le monde.
-      _encadre(_carte(
-        icone: _traceSvg(_traceBlog, size: 16, color: icone, epaisseur: 1.7),
-        label: 'Blog et guides',
-        sub: 'Tous les articles',
-        onTap: () {
-          Navigator.pop(context);
-          launchUrl(Uri.parse('https://tytoai.app/blog'),
-              mode: LaunchMode.externalApplication);
-        },
-      )),
       if (signedIn && isPro)
         _encadre(_carte(
           icone: _traceSvg(_traceEquipe, size: 16, color: icone),
@@ -656,24 +627,17 @@ class _TytoDrawerState extends State<TytoDrawer>
             }
           },
         )),
-      // Les conseils de saison (épillets, chaleur, froid…) : un
-      // interrupteur propre à l'application. On ne ferme pas le menu au
-      // toucher, pour voir le changement.
-      if (signedIn)
-        _encadre(_carte(
-          icone: _traceSvg(_saisonActive ? _traceCloche : _traceClocheBarree,
-              size: 16, color: icone),
-          label: 'Conseils de saison',
-          sub: _saisonActive
-              ? 'Notifications activées'
-              : 'Notifications désactivées',
-          onTap: () async {
-            final nouveau = !_saisonActive;
-            setState(() => _saisonActive = nouveau);
-            await AlertesSaison.definir(nouveau);
-            await NotificationService.reprogrammerSaisonDepuisMemoire();
-          },
-        )),
+      // Les réglages rangés à part (blog, mot de passe, suppression du
+      // compte) pour alléger le bas du menu.
+      _encadre(_carte(
+        icone: _traceSvg(_traceReglages, size: 16, color: icone),
+        label: 'Paramètres',
+        sub: signedIn ? 'Compte, notifications, aide' : 'Blog, aide, à propos',
+        onTap: () {
+          Navigator.pop(context);
+          ParametresScreen.ouvrir(context);
+        },
+      )),
       if (signedIn)
         _encadre(_carte(
           icone: _traceSvg(_traceDeconnexion, size: 16, color: icone),
@@ -682,18 +646,6 @@ class _TytoDrawerState extends State<TytoDrawer>
           onTap: () async {
             Navigator.pop(context);
             await AuthService.signOut();
-          },
-        )),
-      // Exigé par Apple et Google : un compte créé dans l'app doit
-      // pouvoir être supprimé depuis l'app.
-      if (signedIn)
-        _encadre(_carte(
-          icone: _traceSvg(_traceCorbeille, size: 16, color: icone),
-          label: 'Supprimer mon compte',
-          sub: 'Effacer définitivement mes données',
-          onTap: () {
-            Navigator.pop(context);
-            DeleteAccountDialog.afficher(context);
           },
         )),
       if (subscribed) _buildBadge() else const SizedBox(height: 14),

@@ -9,6 +9,8 @@ import 'theme/typography.dart';
 import 'screens/chat_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
+import 'services/theme_service.dart';
+import 'widgets/mot_de_passe_dialog.dart';
 
 // Attention : ce ne sont PAS des clés secrètes, elles sont faites pour être publiques.
 const String supabaseUrl = 'https://wtmlzrtbsxlwyxpnimee.supabase.co';
@@ -19,13 +21,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Les barres du système (heure, navigation) prennent le bleu nuit du site
   // au lieu du noir par défaut, avec des icônes claires.
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Color(0xFF1A2336),
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-    systemNavigationBarColor: Color(0xFF151C2C),
-    systemNavigationBarIconBrightness: Brightness.light,
-  ));
+  // Le mode nuit ou jour choisi dans Paramètres (et les barres du système).
+  await ThemeService.charger();
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   await NotificationService.initialiser();
   runApp(const TytoApp());
@@ -109,7 +106,7 @@ class TytoApp extends StatelessWidget {
           TargetPlatform.android:
               _TransitionOpaque(FadeUpwardsPageTransitionsBuilder()),
         }),
-        colorScheme: ColorScheme.dark(
+        colorScheme: (TytoColors.jour ? const ColorScheme.light() : const ColorScheme.dark()).copyWith(
           primary: TytoColors.fauve,
           secondary: TytoColors.fauve,
           surface: TytoColors.nuit2,
@@ -161,16 +158,38 @@ class _AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<_AuthGate> {
   bool _ready = false;
+  bool _dureeMiniEcoulee = false;
   StreamSubscription<AuthState>? _sub;
 
   @override
   void initState() {
     super.initState();
+    Future.delayed(const Duration(milliseconds: 1500), () {
+      if (mounted) setState(() => _dureeMiniEcoulee = true);
+    });
     _ensureSession();
     // Si la session disparaît (déconnexion, expiration…), on en recrée
     // aussitôt une anonyme : l'app doit TOUJOURS avoir une session valide,
     // sinon le chat se retrouve bloqué sur "connexion en cours".
     _sub = AuthService.onAuthStateChange.listen((state) {
+      // Retour du lien « Mot de passe oublié » : on propose de choisir un
+      // nouveau mot de passe.
+      if (state.event == AuthChangeEvent.passwordRecovery) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          final ok = await MotDePasseDialog.afficher(
+            context,
+            titre: 'Nouveau mot de passe',
+            intro: 'Choisis ton nouveau mot de passe, de 8 caractères au minimum.',
+          );
+          if (ok == true && mounted) {
+            ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+              const SnackBar(content: Text('Mot de passe mis à jour.')),
+            );
+          }
+        });
+        return;
+      }
       if (state.session != null) {
         // Une vraie connexion a abouti : le marqueur peut être levé.
         AuthService.oauthEnCours = false;
@@ -199,13 +218,36 @@ class _AuthGateState extends State<_AuthGate> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_ready) {
-      // Volontairement vide : l'écran de lancement d'Android (logo + phrase)
-      // est encore affiché à cet instant. Y remettre un logo ferait croire
-      // à un second démarrage.
-      return const Scaffold(
-          backgroundColor: Colors.transparent, body: SizedBox.shrink());
-    }
-    return const ChatScreen();
+    // Page de lancement (logo + phrase), identique sur Android et iOS :
+    // elle reste au moins 1,5 s, puis s'efface en fondu.
+    final fini = _ready && _dureeMiniEcoulee;
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 350),
+      child: fini
+          ? const ChatScreen(key: ValueKey('chat'))
+          : const _PageLancement(key: ValueKey('lancement')),
+    );
+  }
+}
+
+
+/// La page de lancement : le même visuel que l'écran natif d'Android
+/// (même image, même taille, centrée sur le fond de la marque), pour que
+/// le passage de l'un à l'autre ne se voie pas — et pour que iOS ait la
+/// même page qu'Android.
+class _PageLancement extends StatelessWidget {
+  const _PageLancement({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF151C2C),
+      alignment: Alignment.center,
+      child: Image.asset(
+        'assets/images/splash_logo.png',
+        width: 168.75,
+        filterQuality: FilterQuality.high,
+      ),
+    );
   }
 }

@@ -233,7 +233,7 @@ class _SoinDossierScreenState extends State<SoinDossierScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: TytoColors.champ,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: encreA(0x1f)),
       ),

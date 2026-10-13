@@ -26,26 +26,26 @@ double ligneFraunces(double taille) =>
 TextStyle karla(
   double taille, {
   FontWeight poids = FontWeight.w400,
-  Color couleur = TytoColors.encre,
+  Color? couleur,
   double? interligne,
 }) {
-  return TytoText.ui(size: taille, weight: poids, color: couleur).copyWith(
+  return TytoText.ui(size: taille, weight: poids, color: couleur ?? TytoColors.encre).copyWith(
     height: interligne ?? ligneKarla(taille) / taille,
     leadingDistribution: TextLeadingDistribution.even,
   );
 }
 
 /// Fraunces en gras (titres du site), ligne « normal » du navigateur.
-TextStyle fraunces(double taille, {Color couleur = TytoColors.encre}) {
-  return TytoText.display(size: taille, color: couleur).copyWith(
+TextStyle fraunces(double taille, {Color? couleur}) {
+  return TytoText.display(size: taille, color: couleur ?? TytoColors.encre).copyWith(
     height: ligneFraunces(taille) / taille,
     leadingDistribution: TextLeadingDistribution.even,
   );
 }
 
 /// Newsreader (textes de lecture du site) avec son line-height CSS.
-TextStyle newsreader(double taille, {Color couleur = TytoColors.encre, required double interligne}) {
-  return TytoText.body(size: taille, color: couleur).copyWith(
+TextStyle newsreader(double taille, {Color? couleur, required double interligne}) {
+  return TytoText.body(size: taille, color: couleur ?? TytoColors.encre).copyWith(
     height: interligne,
     leadingDistribution: TextLeadingDistribution.even,
   );
@@ -56,11 +56,11 @@ TextStyle newsreader(double taille, {Color couleur = TytoColors.encre, required 
 const BoxShadow ombrePapier = BoxShadow(color: Color(0x47000000), blurRadius: 11.3, offset: Offset(0, 3));
 
 /// paperCard du site : papier ivoire, bord encre à 15 %, rayon 12, ombre.
-const BoxDecoration decorationPapier = BoxDecoration(
+BoxDecoration get decorationPapier => BoxDecoration(
   color: TytoColors.papier,
-  borderRadius: BorderRadius.all(Radius.circular(12)),
-  border: Border.fromBorderSide(BorderSide(color: Color(0x262A2118))),
-  boxShadow: [ombrePapier],
+  borderRadius: const BorderRadius.all(Radius.circular(12)),
+  border: Border.fromBorderSide(BorderSide(color: TytoColors.encre.withAlpha(0x26))),
+  boxShadow: const [ombrePapier],
 );
 
 /// Le « × » qui ferme les fenêtres du site (race, comportements, animal
@@ -88,7 +88,7 @@ class CroixFermerAnimaux extends StatelessWidget {
             fontWeight: FontWeight.w400,
             height: 1.15,
             leadingDistribution: TextLeadingDistribution.even,
-            color: const Color(0x882A2118),
+            color: TytoColors.encre.withAlpha(0x88),
           ),
         ),
       ),

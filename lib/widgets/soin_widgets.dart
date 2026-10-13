@@ -208,11 +208,11 @@ Color couleurSuivi(String etat) {
 Color couleurSuiviTexte(String etat) {
   switch (etat) {
     case 'better':
-      return const Color(0xFF2F6E60);
+      return TytoColors.surPapier(const Color(0xFF2F6E60));
     case 'worse':
       return TytoColors.urgence;
     default:
-      return const Color(0xFF8A6A2F);
+      return TytoColors.surPapier(const Color(0xFF8A6A2F));
   }
 }
 
@@ -398,7 +398,7 @@ class ChampChoixSoin extends StatelessWidget {
         height: hauteur,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: TytoColors.champ,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: encreA(0x33)),
         ),
@@ -444,7 +444,7 @@ class PastilleSoin extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
         decoration: BoxDecoration(
-          color: actif ? c.withAlpha(0x33) : Colors.white,
+          color: actif ? c.withAlpha(0x33) : TytoColors.champ,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: actif ? c : encreA(0x33)),
         ),
@@ -743,7 +743,7 @@ class ProgressionSoin extends StatelessWidget {
         child: FractionallySizedBox(
           widthFactor: r,
           heightFactor: 1,
-          child: const ColoredBox(color: TytoColors.vert),
+          child: ColoredBox(color: TytoColors.vert),
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/colors.dart';
+import '../widgets/fenetre_papier.dart' show couleurIndication;
 import '../theme/typography.dart';
 import '../models/pet.dart';
 import '../services/data_service.dart';
@@ -35,12 +36,12 @@ const _especes = <(String, String)>[
 
 // Les teintes d'encre du site, avec leur transparence exacte
 // (ENCRE + "99", "aa", "88", "77", "33", "26").
-const _encre60 = Color(0x992A2118);
-const _encre67 = Color(0xAA2A2118);
-const _encre53 = Color(0x882A2118);
-const _encre20 = Color(0x332A2118);
-const _placeholder = Color(0xFF757575); // couleur par défaut des champs vides du navigateur
-const _rougeSupprimer = Color(0xFFAA3333); // #a33
+Color get _encre60 => TytoColors.encre.withAlpha(0x99);
+Color get _encre67 => TytoColors.encre.withAlpha(0xAA);
+Color get _encre53 => TytoColors.encre.withAlpha(0x88);
+Color get _encre20 => TytoColors.encre.withAlpha(0x33);
+Color get _placeholder => couleurIndication; // couleur par défaut des champs vides du navigateur
+Color get _rougeSupprimer => TytoColors.surPapier(const Color(0xFFAA3333)); // #a33
 
 // Les deux petits dessins écrits directement dans la fiche du site (sans
 // passer par Icons.js) : la croix « race » et la gamelle.
@@ -362,7 +363,7 @@ class _PetsScreenState extends State<PetsScreen> {
                     runSpacing: 14,
                     children: [
                       _lien(
-                        icone: const SiteIcon('IconBulb', size: 11, color: _encre67),
+                        icone: SiteIcon('IconBulb', size: 11, color: _encre67),
                         texte: 'Pourquoi il fait ça ?',
                         couleur: _encre67,
                         onTap: () => BehaviorsSheet.afficher(context, p),
@@ -549,7 +550,7 @@ class _CaseNative extends StatelessWidget {
       width: 13,
       height: 13,
       decoration: BoxDecoration(
-        color: coche ? const Color(0xFF0075FF) : Colors.white,
+        color: coche ? const Color(0xFF0075FF) : TytoColors.champ,
         borderRadius: BorderRadius.circular(2),
         border: coche ? null : Border.all(color: const Color(0xFF767676)),
       ),
@@ -684,7 +685,7 @@ class _PetFormState extends State<_PetForm> {
         hintMaxLines: lignesIndication,
         hintStyle: karla(14.5, couleur: _placeholder),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: TytoColors.champ,
         contentPadding: padding,
         border: _bord(_encre20, 1),
         enabledBorder: _bord(_encre20, 1),
@@ -742,7 +743,7 @@ class _PetFormState extends State<_PetForm> {
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(11, 6, 11, 9),
                     decoration: BoxDecoration(
-                      color: e.$1 == _species ? const Color(0x33C99A55) : Colors.white,
+                      color: e.$1 == _species ? const Color(0x33C99A55) : TytoColors.champ,
                       borderRadius: BorderRadius.circular(999),
                       border: Border.all(color: e.$1 == _species ? TytoColors.fauve : _encre20),
                     ),
@@ -775,7 +776,7 @@ class _PetFormState extends State<_PetForm> {
                       height: 39,
                       padding: const EdgeInsets.only(left: 16.5, right: 3.5),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: TytoColors.champ,
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: _encre20),
                       ),
@@ -784,13 +785,13 @@ class _PetFormState extends State<_PetForm> {
                           value: valeurSexe,
                           isExpanded: true,
                           isDense: true,
-                          dropdownColor: Colors.white,
+                          dropdownColor: TytoColors.champ,
                           borderRadius: BorderRadius.circular(10),
                           icon: SvgPicture.string(
                             _svgChevron,
                             width: 9,
                             height: 5.5,
-                            colorFilter: const ColorFilter.mode(TytoColors.encre, BlendMode.srcIn),
+                            colorFilter: ColorFilter.mode(TytoColors.encre, BlendMode.srcIn),
                           ),
                           style: _styleChamp,
                           items: const [
@@ -817,7 +818,7 @@ class _PetFormState extends State<_PetForm> {
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       alignment: Alignment.centerLeft,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF0E9D8),
+                        color: TytoColors.champ.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: _encre20),
                       ),
@@ -844,7 +845,7 @@ class _PetFormState extends State<_PetForm> {
               height: 39,
               padding: const EdgeInsets.only(left: 13, right: 15.5),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: TytoColors.champ,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: _encre20),
               ),
@@ -862,7 +863,7 @@ class _PetFormState extends State<_PetForm> {
                     _svgCalendrier,
                     width: 11,
                     height: 12,
-                    colorFilter: const ColorFilter.mode(TytoColors.encre, BlendMode.srcIn),
+                    colorFilter: ColorFilter.mode(TytoColors.encre, BlendMode.srcIn),
                   ),
                 ],
               ),

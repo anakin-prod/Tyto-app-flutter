@@ -252,7 +252,7 @@ class _LostPetScreenState extends State<LostPetScreen> {
                                             ),
                                             TextSpan(
                                               text: 'i-cad.fr — déclarer la perte',
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontWeight: FontWeight.w700,
                                                 decoration: TextDecoration.underline,
                                                 decorationColor: TytoColors.encre,
@@ -304,12 +304,12 @@ class _LostPetScreenState extends State<LostPetScreen> {
                                     BoutonPilule(
                                       texte: 'Vétérinaires près de moi',
                                       onTap: EmergencyService.findVet,
-                                      bord: const Color(0x442A2118),
+                                      bord: TytoColors.encre.withAlpha(0x44),
                                       encre: TytoColors.encre,
                                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                                       taille: 12.5,
                                       gras: false,
-                                      icone: const IconeTrait.croix(size: 13, color: TytoColors.encre),
+                                      icone: IconeTrait.croix(size: 13, color: TytoColors.encre),
                                       ecart: 6,
                                     ),
                                   ],
@@ -377,12 +377,12 @@ class _LostPetScreenState extends State<LostPetScreen> {
                                         BoutonPilule(
                                           texte: _copie ? 'Copié !' : "Copier l'annonce",
                                           onTap: _copierAnnonce,
-                                          bord: const Color(0x442A2118),
+                                          bord: TytoColors.encre.withAlpha(0x44),
                                           encre: TytoColors.encre,
                                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                                           taille: 13,
                                           ecart: 6,
-                                          icone: _copie ? const IconeTrait.coche(size: 14, color: TytoColors.encre) : null,
+                                          icone: _copie ? IconeTrait.coche(size: 14, color: TytoColors.encre) : null,
                                         ),
                                       ],
                                     ),
@@ -418,7 +418,7 @@ class _LostPetScreenState extends State<LostPetScreen> {
                                                       child: Container(
                                                         width: 4,
                                                         height: 4,
-                                                        decoration: const BoxDecoration(
+                                                        decoration: BoxDecoration(
                                                           color: TytoColors.encre,
                                                           shape: BoxShape.circle,
                                                         ),
@@ -448,7 +448,7 @@ class _LostPetScreenState extends State<LostPetScreen> {
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        const IconeTrait.alerte(size: 13, color: TytoColors.encre),
+                                        IconeTrait.alerte(size: 13, color: TytoColors.encre),
                                         const SizedBox(width: 6),
                                         Text('Vol ou arnaque', style: karla(13.5, poids: FontWeight.w700)),
                                       ],
@@ -497,9 +497,9 @@ class _LostPetScreenState extends State<LostPetScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0x55FFFFFF),
+        color: TytoColors.champ.withAlpha(0x55),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0x262A2118)),
+        border: Border.all(color: TytoColors.encre.withAlpha(0x26)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

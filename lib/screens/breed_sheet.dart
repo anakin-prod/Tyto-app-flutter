@@ -60,7 +60,7 @@ class BreedSheet extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${race.nom} : ce qu\'il vaut mieux garder en tête pour ${pet.name}.',
-                  style: karla(12.5, couleur: const Color(0x992A2118)),
+                  style: karla(12.5, couleur: TytoColors.encre.withAlpha(0x99)),
                 ),
                 const SizedBox(height: 12),
                 for (final point in race.points)
@@ -69,9 +69,9 @@ class BreedSheet extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
-                      color: const Color(0x55FFFFFF),
+                      color: TytoColors.champ.withAlpha(0x55),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0x262A2118)),
+                      border: Border.all(color: TytoColors.encre.withAlpha(0x26)),
                     ),
                     child: Text(point, style: karla(13.5, interligne: 1.6)),
                   ),
@@ -79,7 +79,7 @@ class BreedSheet extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(
                   avertissementRace,
-                  style: karla(11, couleur: const Color(0x772A2118), interligne: 1.4),
+                  style: karla(11, couleur: TytoColors.encre.withAlpha(0x77), interligne: 1.4),
                 ),
               ],
             ),

@@ -61,7 +61,10 @@ const _owlPath = '''
 <path d="M60 26 C50 23, 40 29, 38 41 C36 54, 46 66, 60 74 C74 66, 84 54, 82 41 C80 29, 70 23, 60 26 Z" stroke-width="5" />
 <ellipse cx="50" cy="45" rx="4.4" ry="5.2" fill="currentColor" stroke="none" />
 <ellipse cx="70" cy="45" rx="4.4" ry="5.2" fill="currentColor" stroke="none" />
-<path d="M60 53 L57 60 L60 66 L63 60 Z" stroke-width="3.6" />''';
+<path d="M60 53 L57 60 L60 66 L63 60 Z" stroke-width="3.6" />
+<path d="M52 130 L50 141 M50 141 L46 146 M50 141 L50 147 M50 141 L54 146" stroke-width="4" />
+<path d="M68 130 L70 141 M70 141 L66 146 M70 141 L70 147 M70 141 L74 146" stroke-width="4" />
+<path d="M20 145 C40 140.5, 84 141.5, 101 144.5" stroke-width="4.5" opacity="0.65" />''';
 
 /// Le logo Google officiel, avec ses quatre couleurs — pour le bouton
 /// « Continuer avec Google », comme sur le site.

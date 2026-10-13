@@ -24,16 +24,16 @@ class WeightChart extends StatelessWidget {
 
     final diff = points.last.kg - points.first.kg;
     final couleurDiff = diff > 0
-        ? const Color(0xFF8A5A2E)
+        ? TytoColors.surPapier(const Color(0xFF8A5A2E))
         : diff < 0
-            ? const Color(0xFF2E6A55)
+            ? TytoColors.surPapier(const Color(0xFF2E6A55))
             : const Color(0xFF888888);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
       // Sur le site, la courbe est sur fond blanc (#fff), pas sur le papier.
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: TytoColors.champ,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: TytoColors.encre.withOpacity(0.15)),
         // 0 3px 14px rgba(0,0,0,0.28) : un flou CSS de 14 px vaut un écart-type
@@ -168,7 +168,7 @@ class _PoidsPainter extends CustomPainter {
         centre,
         3,
         Paint()
-          ..color = Colors.white
+          ..color = TytoColors.champ
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.2,
       );

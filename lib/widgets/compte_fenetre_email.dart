@@ -237,7 +237,7 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
           const SizedBox(height: 8),
           Text(
             _erreur!,
-            style: TytoText.ui(size: 12.5, weight: FontWeight.w400, color: const Color(0xFFAA3333))
+            style: TytoText.ui(size: 12.5, weight: FontWeight.w400, color: TytoColors.surPapier(const Color(0xFFAA3333)))
                 .copyWith(height: 1.4, leadingDistribution: TextLeadingDistribution.even),
           ),
         ],
@@ -310,7 +310,7 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
       children: [
         Row(
           children: [
-            const SiteIcon('IconMail', size: 18, color: TytoColors.encre),
+            SiteIcon('IconMail', size: 18, color: TytoColors.encre),
             const SizedBox(width: 8),
             Expanded(child: Text('Vérifie tes emails !', style: _titre)),
           ],

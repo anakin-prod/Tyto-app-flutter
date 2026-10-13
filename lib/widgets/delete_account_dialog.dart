@@ -155,7 +155,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                   onTap: () => Navigator.pop(context, false),
                   actif: !_envoi,
                   opaciteInactive: 1,
-                  bord: const Color(0x33EDE7D6),
+                  bord: TytoColors.lune.withAlpha(0x33),
                   encre: TytoColors.brume,
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                   taille: 14,

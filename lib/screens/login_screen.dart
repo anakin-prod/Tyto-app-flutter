@@ -28,6 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // e-mail reste juste en dessous.
   bool _modeMotDePasse = true;
   String? _errorMessage;
+  String? _info;
   StreamSubscription<AuthState>? _sub;
 
   @override
@@ -104,6 +105,34 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  /// « Mot de passe oublié ? » : envoie un lien de réinitialisation.
+  Future<void> _motDePasseOublie() async {
+    final email = _emailController.text.trim();
+    if (!email.contains('@')) {
+      setState(() {
+        _info = null;
+        _errorMessage = "Écris d'abord ton adresse e-mail dans le champ ci-dessus.";
+      });
+      return;
+    }
+    setState(() {
+      _sending = true;
+      _errorMessage = null;
+      _info = null;
+    });
+    try {
+      await AuthService.envoyerReinitialisation(email);
+      if (mounted) {
+        setState(() => _info =
+            "Si un compte existe pour cette adresse, un lien pour choisir un nouveau mot de passe vient d'être envoyé. Pense à regarder tes courriers indésirables.");
+      }
+    } catch (e) {
+      if (mounted) setState(() => _errorMessage = "Impossible d'envoyer le lien pour l'instant. Réessaie dans un instant.");
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   Future<void> _signInWithGoogle() async {
     setState(() => _errorMessage = null);
     try {
@@ -133,7 +162,8 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
   /// Un lien souligné, gris brume (« Se connecter avec un mot de passe »…).
-  Widget _lien(String texte, VoidCallback onTap, {double size = 12, Color couleur = TytoColors.brume}) {
+  Widget _lien(String texte, VoidCallback onTap, {double size = 12, Color? couleur}) {
+    couleur ??= TytoColors.brume;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -280,6 +310,15 @@ class _LoginScreenState extends State<LoginScreen> {
             style: TytoText.ui(size: 13, weight: FontWeight.w400, color: TytoColors.fauve),
           ),
         ],
+        if (_info != null) ...[
+          const SizedBox(height: 10),
+          Text(
+            _info!,
+            textAlign: TextAlign.center,
+            style: TytoText.ui(size: 13, weight: FontWeight.w400, color: TytoColors.lune)
+                .copyWith(height: 1.45),
+          ),
+        ],
         if (!_modeMotDePasse) ...[
           const SizedBox(height: 14),
           Text(
@@ -306,8 +345,10 @@ class _LoginScreenState extends State<LoginScreen> {
               () => setState(() {
                 _modeMotDePasse = !_modeMotDePasse;
                 _errorMessage = null;
+                _info = null;
               }),
             ),
+            if (_modeMotDePasse) _lien('Mot de passe oublié ?', _motDePasseOublie),
             _lien('Créer un compte', () => FenetreCreerCompte.afficher(context)),
             // L'écran s'ouvre par-dessus Tyto : on peut y revenir sans se connecter.
             if (retour)

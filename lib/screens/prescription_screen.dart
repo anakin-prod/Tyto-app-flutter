@@ -208,7 +208,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                 BoutonPilule(
                   texte: 'Choisir dans la galerie',
                   onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-                  bord: const Color(0x332A2118),
+                  bord: TytoColors.encre.withAlpha(0x33),
                   encre: TytoColors.encre,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   taille: 13.5,
@@ -421,8 +421,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                             Container(
                               margin: const EdgeInsets.only(top: 14),
                               padding: const EdgeInsets.only(top: 8),
-                              decoration: const BoxDecoration(
-                                border: Border(top: BorderSide(color: Color(0x1A2A2118))),
+                              decoration: BoxDecoration(
+                                border: Border(top: BorderSide(color: TytoColors.encre.withAlpha(0x1A))),
                               ),
                               child: Text(
                                 "Tyto retranscrit, il n'interprète pas. La responsabilité du traitement administré "
@@ -447,7 +447,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
   Widget _entete() {
     return Row(
       children: [
-        const SiteIcon('IconCamera', size: 18, color: TytoColors.encre),
+        SiteIcon('IconCamera', size: 18, color: TytoColors.encre),
         const SizedBox(width: 8),
         Expanded(
           child: Text('Lire une ordonnance', style: TytoText.display(size: 19, color: TytoColors.encre)),
@@ -513,7 +513,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                 onTap: _reprendre,
                 actif: !_lecture,
                 opaciteInactive: 1,
-                bord: const Color(0x33EDE7D6),
+                bord: TytoColors.lune.withAlpha(0x33),
                 encre: TytoColors.brume,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 taille: 12,
@@ -590,7 +590,7 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
           texte: 'Créer un dossier de soins avec rappels',
           onTap: _creerDossier,
           actif: pret,
-          bord: const Color(0x332A2118),
+          bord: TytoColors.encre.withAlpha(0x33),
           encre: TytoColors.encre,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           taille: 13.5,
@@ -606,15 +606,15 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
   }
 
   Widget _ligne(_LigneEditable l) {
-    final champ = TytoText.ui(size: 12.5, weight: FontWeight.w400, color: Colors.black);
+    final champ = TytoText.ui(size: 12.5, weight: FontWeight.w400, color: TytoColors.encre);
     InputDecoration petit(String indication) => decorationChampPapier(
           indication: indication,
           taille: 12.5,
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
           rayon: 6,
-          bord: const Color(0x222A2118),
+          bord: TytoColors.encre.withAlpha(0x22),
         );
-    const traitBas = UnderlineInputBorder(borderSide: BorderSide(color: Color(0x222A2118)));
+    final traitBas = UnderlineInputBorder(borderSide: BorderSide(color: TytoColors.encre.withAlpha(0x22)));
     void basculer() => setState(() => l.checked = !l.checked);
 
     return Padding(
@@ -625,9 +625,9 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: l.checked ? Colors.white : const Color(0x08000000),
+          color: l.checked ? TytoColors.champ : const Color(0x08000000),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0x222A2118)),
+          border: Border.all(color: TytoColors.encre.withAlpha(0x22)),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -643,8 +643,8 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                 children: [
                   TextField(
                     controller: l.medicament,
-                    style: TytoText.ui(size: 14.5, weight: FontWeight.w700, color: Colors.black),
-                    decoration: const InputDecoration(
+                    style: TytoText.ui(size: 14.5, weight: FontWeight.w700, color: TytoColors.encre),
+                    decoration: InputDecoration(
                       isDense: true,
                       // padding 2 / 0 et le trait d'1 px dessous : 22 px.
                       contentPadding: EdgeInsets.fromLTRB(0, 2, 0, 3),
@@ -724,12 +724,12 @@ class _PrescriptionScreenState extends State<PrescriptionScreen> {
                           alignment: Alignment.topLeft,
                           child: Row(
                             children: [
-                              const SiteIcon('IconAlert', size: 11, color: Color(0xFFA35A2E)),
+                              SiteIcon('IconAlert', size: 11, color: TytoColors.surPapier(const Color(0xFFA35A2E))),
                               const SizedBox(width: 5),
                               Flexible(
                                 child: Text(
                                   "Lecture incertaine — vérifie sur l'ordonnance originale",
-                                  style: TytoText.ui(size: 11, weight: FontWeight.w700, color: const Color(0xFFA35A2E)),
+                                  style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.surPapier(const Color(0xFFA35A2E))),
                                 ),
                               ),
                             ],
@@ -760,7 +760,7 @@ class _CaseNavigateur extends StatelessWidget {
       width: 13,
       height: 13,
       decoration: BoxDecoration(
-        color: coche ? const Color(0xFF0075FF) : Colors.white,
+        color: coche ? const Color(0xFF0075FF) : TytoColors.champ,
         borderRadius: BorderRadius.circular(2.5),
         border: coche ? null : Border.all(color: const Color(0xFF767676)),
       ),

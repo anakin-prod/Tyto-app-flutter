@@ -214,7 +214,7 @@ class _EmergencySheetState extends State<EmergencySheet> {
   Widget _entete() {
     return Row(
       children: [
-        const IconeTrait.alerte(size: 22, color: TytoColors.lune),
+        IconeTrait.alerte(size: 22, color: TytoColors.lune),
         const SizedBox(width: 9),
         Expanded(
           child: Text('Urgence', style: TytoText.display(size: 24, color: TytoColors.lune)),
@@ -223,7 +223,7 @@ class _EmergencySheetState extends State<EmergencySheet> {
         BoutonPilule(
           texte: 'Fermer',
           onTap: () => Navigator.pop(context),
-          bord: const Color(0x40EDE7D6),
+          bord: TytoColors.lune.withAlpha(0x40),
           encre: TytoColors.lune,
           padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
           taille: 12.5,
@@ -294,11 +294,11 @@ class _EmergencySheetState extends State<EmergencySheet> {
           BoutonPilule(
             texte: 'Trouver un vétérinaire ouvert près de moi',
             onTap: EmergencyService.findVet,
-            bord: const Color(0x332A2118),
+            bord: TytoColors.encre.withAlpha(0x33),
             encre: TytoColors.encre,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             taille: 13.5,
-            icone: const IconeTrait.croix(size: 15, color: TytoColors.encre),
+            icone: IconeTrait.croix(size: 15, color: TytoColors.encre),
           ),
         ],
       ),
@@ -347,8 +347,8 @@ class _EmergencySheetState extends State<EmergencySheet> {
             const SizedBox(height: 14),
             Container(
               padding: const EdgeInsets.only(top: 10),
-              decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0x1A2A2118))),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: TytoColors.encre.withAlpha(0x1A))),
               ),
               child: Text(
                 "Tyto n'est pas vétérinaire. Ces conseils ne remplacent jamais un examen par un professionnel.",
@@ -400,7 +400,7 @@ class _EmergencySheetState extends State<EmergencySheet> {
             child: BoutonPilule(
               texte: 'Décrire autre chose',
               onTap: _decrireAutreChose,
-              bord: const Color(0x40EDE7D6),
+              bord: TytoColors.lune.withAlpha(0x40),
               encre: TytoColors.lune,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               taille: 13.5,
@@ -411,7 +411,7 @@ class _EmergencySheetState extends State<EmergencySheet> {
             child: BoutonPilule(
               texte: 'Fermer',
               onTap: () => Navigator.pop(context),
-              bord: const Color(0x40EDE7D6),
+              bord: TytoColors.lune.withAlpha(0x40),
               encre: TytoColors.lune,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
               taille: 13.5,

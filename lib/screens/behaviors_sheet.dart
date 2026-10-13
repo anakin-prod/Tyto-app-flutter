@@ -57,7 +57,7 @@ class BehaviorsSheet extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Les gestes mystérieux de ${pet.name}, décodés. Touche une question pour voir la réponse.',
-                  style: karla(12.5, couleur: const Color(0x992A2118)),
+                  style: karla(12.5, couleur: TytoColors.encre.withAlpha(0x99)),
                 ),
                 const SizedBox(height: 12),
                 for (final item in items) _Accordeon(item: item),
@@ -66,7 +66,7 @@ class BehaviorsSheet extends StatelessWidget {
                 Text(
                   'Un comportement inhabituel ou soudain chez ${pet.name} ? Pose la question à Tyto '
                   'dans le chat — il connaît son profil.',
-                  style: karla(11, couleur: const Color(0x772A2118), interligne: 1.4),
+                  style: karla(11, couleur: TytoColors.encre.withAlpha(0x77), interligne: 1.4),
                 ),
               ],
             ),
@@ -98,9 +98,9 @@ class _AccordeonState extends State<_Accordeon> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0x55FFFFFF),
+        color: TytoColors.champ.withAlpha(0x55),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0x262A2118)),
+        border: Border.all(color: TytoColors.encre.withAlpha(0x26)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -220,7 +220,7 @@ class _PawTrailsState extends State<PawTrails> {
                       _especes[p.especeIdx],
                       width: _taille,
                       height: _taille,
-                      colorFilter: const ColorFilter.mode(TytoColors.lune, BlendMode.srcIn),
+                      colorFilter: ColorFilter.mode(TytoColors.lune, BlendMode.srcIn),
                     ),
                   ),
                 ),

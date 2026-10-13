@@ -16,14 +16,14 @@ class TytoBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: const _FondPainter(),
+      painter: _FondPainter(),
       child: child,
     );
   }
 }
 
 class _FondPainter extends CustomPainter {
-  const _FondPainter();
+  _FondPainter();
 
   static const double _rx = 1100;
   static const double _ry = 560;
@@ -31,7 +31,7 @@ class _FondPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final ecran = Offset.zero & size;
-    canvas.drawRect(ecran, Paint()..color = TytoColors.nuit);
+    canvas.drawRect(ecran, Paint()..color = TytoColors.fond);
 
     final centre = Offset(size.width * 0.72, size.height * -0.12);
     final etirement = _rx / _ry;
@@ -43,9 +43,9 @@ class _FondPainter extends CustomPainter {
 
     final cercle = Rect.fromCircle(center: Offset.zero, radius: _ry);
     final pinceau = Paint()
-      ..shader = const RadialGradient(
+      ..shader = RadialGradient(
         radius: 0.5, // la moitié du carré englobant = le rayon de 560
-        colors: [TytoColors.nuit2, TytoColors.nuit],
+        colors: [TytoColors.nuit2, TytoColors.fond],
         stops: [0.0, 0.58],
       ).createShader(cercle);
 
@@ -63,5 +63,5 @@ class _FondPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _FondPainter ancien) => false;
+  bool shouldRepaint(covariant _FondPainter ancien) => true;
 }

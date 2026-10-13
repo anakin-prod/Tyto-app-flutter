@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../theme/colors.dart';
 
 /// Le reflet qui traverse une seule fois le badge PRO / PREMIUM quand il
 /// apparaît (.plan-badge::after et l'animation « badgeGlint » de
@@ -63,7 +64,7 @@ class _ChatRefletBadgeState extends State<ChatRefletBadge> with SingleTickerProv
                         heightFactor: 1,
                         child: FractionalTranslation(
                           translation: Offset((-0.6 + 1.9 * t) / 0.45, 0),
-                          child: const DecoratedBox(
+                          child: DecoratedBox(
                             decoration: BoxDecoration(
                               // linear-gradient(100deg, transparent,
                               // rgba(237,231,214,0.45), transparent)
@@ -71,7 +72,7 @@ class _ChatRefletBadgeState extends State<ChatRefletBadge> with SingleTickerProv
                                 begin: Alignment.centerLeft,
                                 end: Alignment.centerRight,
                                 transform: GradientRotation(0.1745),
-                                colors: [Color(0x00EDE7D6), Color(0x73EDE7D6), Color(0x00EDE7D6)],
+                                colors: [TytoColors.lune.withAlpha(0x00), TytoColors.lune.withAlpha(0x73), TytoColors.lune.withAlpha(0x00)],
                               ),
                             ),
                           ),

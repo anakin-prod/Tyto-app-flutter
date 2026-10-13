@@ -654,7 +654,7 @@ class _CarnetScreenState extends State<CarnetScreen> {
     final proche = d <= 3;
     final mois = _recurrences[ev.id];
     final quand = d == 0 ? "aujourd'hui" : d == 1 ? 'demain' : 'dans $d jours';
-    const brume = TextStyle(color: TytoColors.brume);
+    final brume = TextStyle(color: TytoColors.brume);
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
@@ -884,7 +884,7 @@ class _CarnetScreenState extends State<CarnetScreen> {
                 Expanded(
                   child: Row(
                     children: [
-                      const SiteIcon('IconStethoscope', size: 17, color: TytoColors.encre),
+                      SiteIcon('IconStethoscope', size: 17, color: TytoColors.encre),
                       const SizedBox(width: 7),
                       Flexible(
                         child: Text('Synthèse pour le vétérinaire', style: TytoText.display(size: 17, color: TytoColors.encre)),
@@ -1216,7 +1216,7 @@ class _EventFormState extends State<_EventForm> {
   TextStyle get _champ => TytoText.ui(size: 14.5, weight: FontWeight.w400, color: TytoColors.encre);
 
   BoxDecoration get _cadreChamp => BoxDecoration(
-        color: Colors.white,
+        color: TytoColors.champ,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: TytoColors.encre.withAlpha(0x33)),
       );
@@ -1248,7 +1248,7 @@ class _EventFormState extends State<_EventForm> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
         decoration: BoxDecoration(
-          color: on ? TytoColors.fauve.withAlpha(0x33) : Colors.white,
+          color: on ? TytoColors.fauve.withAlpha(0x33) : TytoColors.champ,
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: on ? TytoColors.fauve : TytoColors.encre.withAlpha(0x33)),
         ),
@@ -1352,7 +1352,7 @@ class _EventFormState extends State<_EventForm> {
           value: _repeat,
           isExpanded: true,
           isDense: true,
-          dropdownColor: Colors.white,
+          dropdownColor: TytoColors.champ,
           borderRadius: BorderRadius.circular(10),
           icon: SvgPicture.string(_flecheSelectNavigateur, width: 9.5, height: 6.5),
           style: _champ,

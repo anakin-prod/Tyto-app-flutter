@@ -183,7 +183,7 @@ class _VeilleScreenState extends State<VeilleScreen> {
 
   /// La carte de présentation : titre, pastille PRO, texte, bouton vert.
   Widget _carteVeille() {
-    const encre = TytoColors.encre;
+    final encre = TytoColors.encre;
     // Le libellé du bouton : avec une icône, le navigateur laisse 3 px
     // sous la ligne (42 px de haut) ; sans icône (« Tyto examine… »),
     // le bouton ne fait plus que 39 px.
@@ -226,7 +226,7 @@ class _VeilleScreenState extends State<VeilleScreen> {
                       height: 24,
                       child: Row(
                         children: [
-                          const SiteIcon('IconMonitor', size: 19, color: encre),
+                          SiteIcon('IconMonitor', size: 19, color: encre),
                           const SizedBox(width: 8),
                           Flexible(
                             child: Text(
@@ -287,7 +287,7 @@ class _VeilleScreenState extends State<VeilleScreen> {
   /// Le bilan, sur papier, avec le filet gauche de 4 px de la couleur du
   /// niveau (le reste du bord : 1 px d'encre à 15 %).
   Widget _carteBilan(_Bilan b) {
-    const encre = TytoColors.encre;
+    final encre = TytoColors.encre;
     final filet = b.niveau == 'alert'
         ? const Color(0xFFC9553F)
         : b.niveau == 'watch'
@@ -296,8 +296,8 @@ class _VeilleScreenState extends State<VeilleScreen> {
     final teinte = b.niveau == 'alert'
         ? TytoColors.urgence
         : b.niveau == 'watch'
-            ? const Color(0xFFA35A2E)
-            : const Color(0xFF2E6A55);
+            ? TytoColors.surPapier(const Color(0xFFA35A2E))
+            : TytoColors.surPapier(const Color(0xFF2E6A55));
     final icone = b.niveau == 'alert'
         ? 'IconAlert'
         : b.niveau == 'watch'
@@ -448,7 +448,7 @@ class _FiletGauchePainter extends CustomPainter {
       ..close();
     canvas.drawPath(
       Path.combine(PathOperation.difference, anneau, gauche),
-      Paint()..color = const Color(0x262A2118),
+      Paint()..color = TytoColors.encre.withAlpha(0x26),
     );
     canvas.drawPath(Path.combine(PathOperation.intersect, anneau, gauche), Paint()..color = filet);
   }

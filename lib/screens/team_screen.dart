@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/colors.dart';
+import '../widgets/fenetre_papier.dart' show couleurIndication;
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../widgets/site_icons.dart';
@@ -15,15 +16,15 @@ import 'tableau_site.dart';
 const _baseUrl = 'https://tytoai.app';
 
 // Les teintes d'encre du site (ENCRE + "99", "aa", "88", "77", "33", "26", "14").
-const _encre60 = Color(0x992A2118);
-const _encre67 = Color(0xAA2A2118);
-const _encre53 = Color(0x882A2118);
-const _encre47 = Color(0x772A2118);
-const _encre20 = Color(0x332A2118);
-const _encre15 = Color(0x262A2118);
-const _encre8 = Color(0x142A2118);
-const _vertMessage = Color(0xFF2E6A55); // #2e6a55
-const _rougeMessage = Color(0xFFAA3333); // #a33
+Color get _encre60 => TytoColors.encre.withAlpha(0x99);
+Color get _encre67 => TytoColors.encre.withAlpha(0xAA);
+Color get _encre53 => TytoColors.encre.withAlpha(0x88);
+Color get _encre47 => TytoColors.encre.withAlpha(0x77);
+Color get _encre20 => TytoColors.encre.withAlpha(0x33);
+Color get _encre15 => TytoColors.encre.withAlpha(0x26);
+Color get _encre8 => TytoColors.encre.withAlpha(0x14);
+Color get _vertMessage => TytoColors.surPapier(const Color(0xFF2E6A55)); // #2e6a55
+Color get _rougeMessage => TytoColors.surPapier(const Color(0xFFAA3333)); // #a33
 
 /// Un nombre écrit comme le navigateur l'écrit : « 5 » et non « 5.0 ».
 String _nb(num n) => n == n.roundToDouble() ? n.round().toString() : n.toString();
@@ -322,7 +323,7 @@ class _TeamScreenState extends State<TeamScreen> {
                           // paperCard du site (flou CSS de 14 px = 11,3 ici) ;
                           // le contenu qui défile reste dans l'arrondi.
                           clipBehavior: Clip.antiAlias,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: TytoColors.papier,
                             borderRadius: BorderRadius.all(Radius.circular(12)),
                             border: Border.fromBorderSide(BorderSide(color: _encre15)),
@@ -413,7 +414,7 @@ class _TeamScreenState extends State<TeamScreen> {
   Widget _entete() {
     return Row(
       children: [
-        const SiteIcon('IconTeam', size: 18, color: TytoColors.encre),
+        SiteIcon('IconTeam', size: 18, color: TytoColors.encre),
         const SizedBox(width: 8),
         Expanded(child: Text('Équipe', style: fraunces(19))),
         const SizedBox(width: 8),
@@ -510,9 +511,9 @@ class _TeamScreenState extends State<TeamScreen> {
               decoration: InputDecoration(
                 isDense: true,
                 hintText: 'email@exemple.fr',
-                hintStyle: karla(14.5, couleur: const Color(0xFF757575)),
+                hintStyle: karla(14.5, couleur: couleurIndication),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: TytoColors.champ,
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                 border: bord(_encre20, 1),
                 enabledBorder: bord(_encre20, 1),
@@ -634,7 +635,7 @@ class _TeamScreenState extends State<TeamScreen> {
           ),
           TextSpan(
             text: 'CGV professionnelles',
-            style: const TextStyle(
+            style: TextStyle(
               color: _encre67,
               decoration: TextDecoration.underline,
               decorationColor: _encre67,
@@ -658,7 +659,7 @@ class _TeamScreenState extends State<TeamScreen> {
   Widget _ligne(Widget texte, String action, VoidCallback onTap) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: _encre8)),
       ),
       child: Row(

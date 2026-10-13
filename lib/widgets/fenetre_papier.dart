@@ -14,7 +14,8 @@ import '../theme/typography.dart';
 Color encreA(int alpha) => TytoColors.encre.withAlpha(alpha);
 
 /// La couleur des textes d'exemple des champs (navigateur : #757575).
-const Color couleurIndication = Color(0xFF757575);
+/// Le gris des textes d'indication des champs.
+Color get couleurIndication => TytoColors.jour ? const Color(0xFF9AA3BA) : const Color(0xFF757575);
 
 /// La carte « papier » du site (paperCard) : fond ivoire, bord 1 px encre
 /// à 15 %, rayon 12, ombre 0 3px 14px rgba(0,0,0,.28). Avec [lisere], le
@@ -82,7 +83,7 @@ class _PapierPainter extends CustomPainter {
       Path()..addRRect(ext),
       Path()..addRRect(interieur),
     );
-    final bord = Paint()..color = const Color(0x262A2118);
+    final bord = Paint()..color = TytoColors.encre.withAlpha(0x26);
     if (lisere == null) {
       canvas.drawPath(anneau, bord);
       return;
@@ -358,9 +359,10 @@ InputDecoration decorationChampPapier({
   required double taille,
   required EdgeInsets padding,
   double rayon = 10,
-  Color bord = const Color(0x332A2118),
+  Color? bord,
   double? hauteurLigne,
 }) {
+  bord ??= TytoColors.encre.withAlpha(0x33);
   OutlineInputBorder cadre(Color c, double w) => OutlineInputBorder(
         borderRadius: BorderRadius.circular(rayon),
         borderSide: BorderSide(color: c, width: w),
@@ -372,7 +374,7 @@ InputDecoration decorationChampPapier({
     hintMaxLines: 6,
     isDense: true,
     filled: true,
-    fillColor: Colors.white,
+    fillColor: TytoColors.champ,
     contentPadding: EdgeInsets.fromLTRB(
       padding.left + 1,
       padding.top + 1,

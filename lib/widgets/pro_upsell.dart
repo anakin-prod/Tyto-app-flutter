@@ -57,7 +57,7 @@ class ProUpsell extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Align(
+            Align(
               alignment: Alignment.centerLeft,
               child: IconeTrait.bouclier(size: 28, color: TytoColors.vert),
             ),
@@ -89,7 +89,7 @@ class ProUpsell extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const IconeTrait.coche(size: 13, color: TytoColors.vert),
+                    IconeTrait.coche(size: 13, color: TytoColors.vert),
                     const SizedBox(width: 8),
                     Expanded(child: Text(_avantages[i], style: texte)),
                   ],

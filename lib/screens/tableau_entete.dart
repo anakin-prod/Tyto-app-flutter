@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../services/theme_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../widgets/owl_sketch.dart';
@@ -74,11 +75,7 @@ class EnteteSite extends StatelessWidget implements PreferredSizeWidget {
     );
     return AnnotatedRegion<SystemUiOverlayStyle>(
       // Comme une AppBar sombre : barre d'état transparente, icônes claires.
-      value: const SystemUiOverlayStyle(
-        statusBarColor: Color(0x00000000),
-        statusBarBrightness: Brightness.dark,
-        statusBarIconBrightness: Brightness.light,
-      ),
+      value: ThemeService.barresSurFond(),
       child: Container(
         decoration: BoxDecoration(
           border: Border(bottom: BorderSide(color: TytoColors.lune.withOpacity(0.1))),

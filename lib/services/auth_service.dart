@@ -46,6 +46,17 @@ class AuthService {
     Future.delayed(const Duration(minutes: 3), () => oauthEnCours = false);
   }
 
+  /// « Mot de passe oublié » : un lien part par e-mail. Il rouvre l'appli,
+  /// qui propose alors de choisir un nouveau mot de passe.
+  static Future<void> envoyerReinitialisation(String email) async {
+    await _client.auth.resetPasswordForEmail(email, redirectTo: _redirectTo);
+  }
+
+  /// Change le mot de passe du compte connecté.
+  static Future<void> changerMotDePasse(String motDePasse) async {
+    await _client.auth.updateUser(UserAttributes(password: motDePasse));
+  }
+
   static Future<void> signOut() => _client.auth.signOut();
 
   static Session? get currentSession => _client.auth.currentSession;

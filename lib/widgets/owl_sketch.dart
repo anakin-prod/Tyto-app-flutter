@@ -8,7 +8,7 @@ import '../theme/colors.dart';
 class OwlSketch extends StatefulWidget {
   /// Largeur du logo. La hauteur vaut 1.25 x la largeur, comme sur le site.
   final double size;
-  final Color ink;
+  final Color? ink;
 
   /// La couleur des yeux (par défaut la même que le trait). Sert par exemple
   /// à avoir des yeux dorés sur un logo ivoire.
@@ -25,7 +25,7 @@ class OwlSketch extends StatefulWidget {
   const OwlSketch({
     super.key,
     this.size = 40,
-    this.ink = TytoColors.lune,
+    this.ink,
     this.eyeColor,
     this.detail = true,
     this.thinking = false,
@@ -79,7 +79,17 @@ class _OwlSketchState extends State<OwlSketch> with SingleTickerProviderStateMix
     return ferme + (1 - ferme) * ((t - creux) / (fin - creux));
   }
 
-  String _svg(String hex, double ouverture) {
+  /// Les traits sont un peu épaissis : à petite taille, le tracé fin d'origine
+  /// se pixélise. Le gain est plus fort pour les petits logos.
+  String _epaissir(String svg) {
+    final k = widget.size <= 60 ? 1.3 : 1.15;
+    return svg.replaceAllMapped(RegExp(r'stroke-width="([0-9.]+)"'),
+        (m) => 'stroke-width="${(double.parse(m[1]!) * k).toStringAsFixed(2)}"');
+  }
+
+  String _svg(String hex, double ouverture) => _epaissir(_svgBrut(hex, ouverture));
+
+  String _svgBrut(String hex, double ouverture) {
     final yeux = widget.eyeColor == null
         ? hex
         : '#${widget.eyeColor!.value.toRadixString(16).padLeft(8, '0').substring(2)}';
@@ -129,7 +139,7 @@ class _OwlSketchState extends State<OwlSketch> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final hex = '#${widget.ink.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+    final hex = '#${(widget.ink ?? TytoColors.lune).value.toRadixString(16).padLeft(8, '0').substring(2)}';
     // Si l'appareil est réglé sur « animations réduites », on garde les
     // yeux grands ouverts plutôt que de faire clignoter le logo.
     if (MediaQuery.maybeOf(context)?.disableAnimations ?? false) {

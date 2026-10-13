@@ -177,7 +177,7 @@ class _TableauScreenState extends State<TableauScreen> {
         : ton == 'semaine'
             ? TytoColors.fauve.withAlpha(0x88)
             : TytoColors.lune.withAlpha(0x26);
-    const brume = TextStyle(color: TytoColors.brume);
+    final brume = TextStyle(color: TytoColors.brume);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
       decoration: BoxDecoration(
@@ -197,7 +197,7 @@ class _TableauScreenState extends State<TableauScreen> {
                   ),
                   TextSpan(text: ' · ${_nomAnimal(ev.petId)} — ${dateFr(ev.nextDue!)} '),
                   TextSpan(text: '($quand)', style: brume),
-                  if (_recurrences[ev.id] != null) const TextSpan(text: ' · récurrent', style: brume),
+                  if (_recurrences[ev.id] != null) TextSpan(text: ' · récurrent', style: brume),
                 ],
               ),
               style: interligne(TytoText.ui(size: 13.5, color: TytoColors.lune), 1.4),
@@ -313,13 +313,13 @@ class _TableauScreenState extends State<TableauScreen> {
       runSpacing: 8,
       children: [
         _pastille(
-          icone: const SiteIcon('IconPaw', size: 13, color: TytoColors.lune),
+          icone: SiteIcon('IconPaw', size: 13, color: TytoColors.lune),
           texte: '$n compagnon${n > 1 ? 's' : ''}',
         ),
         _pastille(texte: '${retard.length + semaine.length} cette semaine'),
         if (retard.isNotEmpty)
           _pastille(
-            icone: const SiteIcon('IconAlert', size: 13, color: TytoColors.lune),
+            icone: SiteIcon('IconAlert', size: 13, color: TytoColors.lune),
             texte: '${retard.length} en retard',
             alerte: true,
           ),

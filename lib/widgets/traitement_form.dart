@@ -207,7 +207,7 @@ class _TraitementFormState extends State<_TraitementForm> {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: TytoColors.papier,
           borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
         ),
@@ -221,7 +221,7 @@ class _TraitementFormState extends State<_TraitementForm> {
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: TytoColors.champ,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: encreA(0x26)),
               ),

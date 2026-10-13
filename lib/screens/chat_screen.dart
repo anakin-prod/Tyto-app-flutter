@@ -545,7 +545,7 @@ class _ChatScreenState extends State<ChatScreen>
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.image_outlined, color: TytoColors.lune),
+              leading: Icon(Icons.image_outlined, color: TytoColors.lune),
               title: Text('Choisir dans la galerie',
                   style: TytoText.ui(color: TytoColors.lune)),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
@@ -855,12 +855,12 @@ class _ChatScreenState extends State<ChatScreen>
   TextStyle _policeSysteme(
       {required double size,
       FontWeight weight = FontWeight.w400,
-      Color color = TytoColors.lune}) {
+      Color? color}) {
     return TextStyle(
       fontFamily: Theme.of(context).typography.white.bodyMedium?.fontFamily,
       fontSize: size,
       fontWeight: weight,
-      color: color,
+      color: color ?? TytoColors.lune,
     );
   }
 
@@ -1816,7 +1816,7 @@ class _ChatScreenState extends State<ChatScreen>
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const OwlSketch(size: 17, ink: TytoColors.encre, detail: false),
+                OwlSketch(size: 17, ink: TytoColors.encre, detail: false),
                 const SizedBox(width: 7),
                 Text(
                   'TYTO',
@@ -1859,7 +1859,7 @@ class _ChatScreenState extends State<ChatScreen>
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const OwlSketch(
+            OwlSketch(
                 size: 19, ink: TytoColors.encre, detail: false, thinking: true),
             const SizedBox(width: 9),
             Text(
@@ -2045,7 +2045,7 @@ class _ChatScreenState extends State<ChatScreen>
                       text: _faitEstSaison
                           ? 'Conseil de saison : '
                           : 'Le savais-tu ? ',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontStyle: FontStyle.normal,
                           color: TytoColors.lune),
@@ -2661,7 +2661,7 @@ class _ChatScreenState extends State<ChatScreen>
             // Opaque : les empreintes passent derrière la puce, on ne les
             // voit pas à travers (même teinte que l'ancienne, mais pleine).
             backgroundColor: Color.alphaBlend(
-                TytoColors.lune.withOpacity(0.07), TytoColors.nuit),
+                TytoColors.lune.withOpacity(0.07), TytoColors.fond),
             side: BorderSide(color: TytoColors.lune.withOpacity(0.23)),
             // 13 / 17 de marge comme le site, plus le trait de 1 px
             // (ici dessiné par-dessus la marge).
@@ -2862,7 +2862,7 @@ class _TexteRiche extends StatelessWidget {
                             child: Container(
                               width: 5,
                               height: 5,
-                              decoration: const BoxDecoration(
+                              decoration: BoxDecoration(
                                 color: TytoColors.encre,
                                 shape: BoxShape.circle,
                               ),
