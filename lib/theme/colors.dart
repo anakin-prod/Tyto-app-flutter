@@ -18,11 +18,18 @@ class TytoColors {
   static const urgence = Color(0xFFC9553F);
   static const _ivoireFixe = Color(0xFFF4EDDC);
 
+  /// L'ivoire du FOND en mode jour : exactement la même teinte que l'ivoire
+  /// fixe (mêmes proportions de rouge, vert et bleu), mais à 92 % de sa
+  /// luminosité, pour que le fond soit moins éclatant à l'œil.
+  static const ivoireJour = Color(0xFFE0DACA);
+  static const _ivoireJourClair = Color(0xFFE7E3D7);
+  static const _ivoireJourProfond = Color(0xFFD4CBB6);
+
   // ---- Changent avec le mode ----
   /// Le fond de l'application : bleu nuit, ou ivoire en mode jour.
-  static Color get fond => jour ? _ivoireFixe : nuit;
-  static Color get nuit2 => jour ? const Color(0xFFFBF7EA) : const Color(0xFF1F2940);
-  static Color get nuitProfonde => jour ? const Color(0xFFE6DDC6) : const Color(0xFF0A0E18);
+  static Color get fond => jour ? ivoireJour : nuit;
+  static Color get nuit2 => jour ? _ivoireJourClair : const Color(0xFF1F2940);
+  static Color get nuitProfonde => jour ? _ivoireJourProfond : const Color(0xFF0A0E18);
   static Color get brume => jour ? const Color(0xFF5C667F) : const Color(0xFF98A1B6);
   static Color get vert => jour ? const Color(0xFF4B8F80) : const Color(0xFF7FB2A6);
   /// En mode jour, le trait bleu est un bleu un peu plus vif que le bleu nuit

@@ -4,7 +4,8 @@ import '../theme/colors.dart';
 /// L'œil de Tyto — le bouton pour joindre une photo dans le chat : un rond
 /// de 38 px au fin liseré, avec l'œil doré de la chouette qui cligne,
 /// exactement comme sur le site (ellipse rx 8 / ry 9,5 sur une grille de
-/// 24, dans un carré de 19 px, animation "blink" de 6,5 s).
+/// 24, dans un carré de 19 px, animation "blink", ici toutes les 4 s au lieu de 6,5 s : comme la chouette,
+/// il cligne un peu plus souvent que sur le site).
 class OwlEyeButton extends StatefulWidget {
   /// null : bouton désactivé (quota épuisé), comme le bouton « disabled »
   /// du site — il ne réagit plus au toucher.
@@ -30,12 +31,13 @@ class OwlEyeButton extends StatefulWidget {
 
 class _OwlEyeButtonState extends State<OwlEyeButton> with SingleTickerProviderStateMixin {
   late final AnimationController _c;
+  static const _cycleMs = 4000;
 
   @override
   void initState() {
     super.initState();
-    // Le même cycle de 6,5 s que le clignement de la chouette du logo.
-    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 6500))..repeat();
+    // Le même cycle de 4 s que le clignement de la chouette du logo.
+    _c = AnimationController(vsync: this, duration: const Duration(milliseconds: _cycleMs))..repeat();
   }
 
   @override
@@ -48,7 +50,10 @@ class _OwlEyeButtonState extends State<OwlEyeButton> with SingleTickerProviderSt
   /// temps, puis s'écrase brièvement (0 % → 93 % ouvert, 95,5 % à 8 %),
   /// avec la courbe « ease » que le navigateur applique entre deux étapes.
   double _ouverture(double t) {
-    const debut = 0.93, creux = 0.955, fin = 1.0;
+    // Le clignement dure 0,455 s, comme sur le site, quelle que soit la longueur du cycle.
+    const debut = 1 - 455 / _cycleMs;
+    const creux = debut + 455 * (25 / 70) / _cycleMs;
+    const fin = 1.0;
     const ferme = 0.08;
     if (t < debut) return 1;
     if (t < creux) return 1 - (1 - ferme) * Curves.ease.transform((t - debut) / (creux - debut));

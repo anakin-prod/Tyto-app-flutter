@@ -38,17 +38,22 @@ class EnteteSite extends StatelessWidget implements PreferredSizeWidget {
       isPro: isPro,
       isPremium: isPremium,
       onUrgence: onUrgence,
-      deuxLignes: surDeuxLignes(largeur, isPro: isPro, isPremium: isPremium),
+      deuxLignes: surDeuxLignes(largeur,
+          isPro: isPro, isPremium: isPremium, echelle: ThemeService.echelleTexte(context)),
     );
   }
 
   /// Largeurs mesurées sur le site : groupe de gauche (menu, chouette,
   /// « Tyto », badge) et bouton URGENCE ; 8 px d'écart, 16 px de marge de
   /// chaque côté, contenu limité à 720 px.
-  static bool surDeuxLignes(double largeurEcran, {required bool isPro, required bool isPremium}) {
+  ///
+  /// `echelle` : le grossissement du texte choisi dans Paramètres. Les mots
+  /// grandissent avec lui, donc l'en-tête passe plus tôt sur deux lignes.
+  static bool surDeuxLignes(double largeurEcran,
+      {required bool isPro, required bool isPremium, double echelle = 1.0}) {
     final dispo = math.min(largeurEcran, 720.0) - 32;
     final gauche = isPro ? 200.9 : (isPremium ? 233.5 : 130.3);
-    return gauche + 8 + 100.9 > dispo;
+    return (gauche + 8 + 100.9) * echelle > dispo;
   }
 
   @override

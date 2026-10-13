@@ -35,6 +35,9 @@ import '../services/review_service.dart';
 import '../widgets/soin_widgets.dart';
 import '../widgets/compte_fenetre_email.dart';
 import '../services/notification_service.dart';
+import '../services/reglages_service.dart';
+import '../services/son_service.dart';
+import '../services/theme_service.dart';
 import '../services/soins_service.dart';
 import 'placeholder_screen.dart';
 import 'pets_screen.dart';
@@ -614,6 +617,8 @@ class _ChatScreenState extends State<ChatScreen>
       (_conversations[_cleConversation] ??= []).add(messageUtilisateur);
     });
     _controller.clear();
+    Reglages.toucher();
+    SonService.jouerEnvoi();
     _scrollToBottom();
     // Sauvegardé au fil de l'eau, comme sur le site : rien n'est perdu
     // si l'app se ferme en cours de route.
@@ -684,6 +689,7 @@ class _ChatScreenState extends State<ChatScreen>
     }
 
     final reponse = _Message(role: 'assistant', content: result.text ?? '');
+    Reglages.toucher();
     setState(() {
       _sending = false;
       _cleEnvoi = null;
@@ -1337,13 +1343,16 @@ class _ChatScreenState extends State<ChatScreen>
   /// (badge Premium + boutons de conversation) : les boutons de droite
   /// descendent alors sous le logo. Largeurs mesurées sur le site.
   bool _enTeteSurDeuxLignes(double largeurEcran) {
-    double gauche = 16.0 + 38 + 8 + 30 + 8 + 45; // menu, chouette, « Tyto »
+    // Les mots (« Tyto », le badge, URGENCE) grandissent avec la taille du
+    // texte choisie dans Paramètres ; les pictogrammes, non.
+    final k = ThemeService.echelleTexte(context);
+    double gauche = 16.0 + 38 + 8 + 30 + 8 + 45 * k; // menu, chouette, « Tyto »
     if (_isPro) {
-      gauche += 8 + 66;
+      gauche += 8 + 66 * k;
     } else if (_isPremium) {
-      gauche += 8 + 98;
+      gauche += 8 + 98 * k;
     }
-    double droite = 105; // URGENCE
+    double droite = 105 * k; // URGENCE
     if (_boutonsConversation) droite += 40 + 6 + 40 + 6;
     return gauche + 8 + droite + 16 > largeurEcran;
   }

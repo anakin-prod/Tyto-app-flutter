@@ -6,9 +6,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/colors.dart';
 import 'theme/background.dart';
 import 'theme/typography.dart';
+import 'data/phrases_lancement.dart';
 import 'screens/chat_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
+import 'services/reglages_service.dart';
 import 'services/theme_service.dart';
 import 'widgets/mot_de_passe_dialog.dart';
 
@@ -23,6 +25,9 @@ Future<void> main() async {
   // au lieu du noir par défaut, avec des icônes claires.
   // Le mode nuit ou jour choisi dans Paramètres (et les barres du système).
   await ThemeService.charger();
+  // Les réglages des rappels et des sons, et la phrase de la page de lancement.
+  await Reglages.charger();
+  await PhraseLancement.preparer();
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
   await NotificationService.initialiser();
   runApp(const TytoApp());
@@ -92,8 +97,27 @@ class TytoApp extends StatelessWidget {
       scrollBehavior: const TytoScrollBehavior(),
       // Le dégradé du site est posé une fois pour toutes derrière chaque
       // écran, plutôt que répété dans chacun d'eux.
-      builder: (context, child) =>
-          TytoBackground(child: child ?? const SizedBox.shrink()),
+      // La taille du texte choisie dans Paramètres s'applique ici, une fois
+      // pour tout l'écran : « Normale » laisse la taille du téléphone telle
+      // quelle, « Grande » et « Très grande » l'agrandissent.
+      builder: (context, child) => ValueListenableBuilder<TailleTexte>(
+        valueListenable: ThemeService.taille,
+        builder: (context, taille, _) {
+          final mq = MediaQuery.of(context);
+          final data = taille == TailleTexte.normale
+              ? mq
+              : mq.copyWith(
+                  textScaler: TextScaler.linear(
+                    (mq.textScaler.scale(100) / 100 * taille.facteur)
+                        .clamp(0.85, 1.8),
+                  ),
+                );
+          return MediaQuery(
+            data: data,
+            child: TytoBackground(child: child ?? const SizedBox.shrink()),
+          );
+        },
+      ),
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.transparent,
@@ -106,7 +130,10 @@ class TytoApp extends StatelessWidget {
           TargetPlatform.android:
               _TransitionOpaque(FadeUpwardsPageTransitionsBuilder()),
         }),
-        colorScheme: (TytoColors.jour ? const ColorScheme.light() : const ColorScheme.dark()).copyWith(
+        colorScheme: (TytoColors.jour
+                ? const ColorScheme.light()
+                : const ColorScheme.dark())
+            .copyWith(
           primary: TytoColors.fauve,
           secondary: TytoColors.fauve,
           surface: TytoColors.nuit2,
@@ -164,7 +191,8 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 1500), () {
+    // La page de lancement reste le temps de lire la phrase.
+    Future.delayed(PhraseLancement.duree, () {
       if (mounted) setState(() => _dureeMiniEcoulee = true);
     });
     _ensureSession();
@@ -180,7 +208,8 @@ class _AuthGateState extends State<_AuthGate> {
           final ok = await MotDePasseDialog.afficher(
             context,
             titre: 'Nouveau mot de passe',
-            intro: 'Choisis ton nouveau mot de passe, de 8 caractères au minimum.',
+            intro:
+                'Choisis ton nouveau mot de passe, de 8 caractères au minimum.',
           );
           if (ok == true && mounted) {
             ScaffoldMessenger.maybeOf(context)?.showSnackBar(
@@ -219,34 +248,112 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   Widget build(BuildContext context) {
     // Page de lancement (logo + phrase), identique sur Android et iOS :
-    // elle reste au moins 1,5 s, puis s'efface en fondu.
+    // elle reste le temps de lire la phrase (de 3 à 5 secondes), puis
+    // s'efface en fondu. Un toucher la passe aussitôt, si l'appli est prête.
     final fini = _ready && _dureeMiniEcoulee;
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 350),
       child: fini
           ? const ChatScreen(key: ValueKey('chat'))
-          : const _PageLancement(key: ValueKey('lancement')),
+          : _PageLancement(
+              key: const ValueKey('lancement'),
+              onTap: () {
+                if (_ready && mounted) setState(() => _dureeMiniEcoulee = true);
+              },
+            ),
     );
   }
 }
 
-
 /// La page de lancement : le même visuel que l'écran natif d'Android
 /// (même image, même taille, centrée sur le fond de la marque), pour que
 /// le passage de l'un à l'autre ne se voie pas — et pour que iOS ait la
-/// même page qu'Android.
-class _PageLancement extends StatelessWidget {
-  const _PageLancement({super.key});
+/// même page qu'Android. Une phrase différente à chaque ouverture apparaît
+/// en fondu sous le logo, sans jamais le faire bouger.
+class _PageLancement extends StatefulWidget {
+  final VoidCallback? onTap;
+  const _PageLancement({super.key, this.onTap});
+
+  @override
+  State<_PageLancement> createState() => _PageLancementState();
+}
+
+class _PageLancementState extends State<_PageLancement> {
+  static const _largeurLogo = 168.75;
+  // L'image du logo fait 675 x 1172 pixels.
+  static const _hauteurLogo = _largeurLogo * 1172 / 675;
+  static const _ivoire = Color(0xFFEDE7D6);
+
+  bool _phraseVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Le logo seul d'abord (comme l'écran natif), puis la phrase en fondu.
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) setState(() => _phraseVisible = true);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFF151C2C),
-      alignment: Alignment.center,
-      child: Image.asset(
-        'assets/images/splash_logo.png',
-        width: 168.75,
-        filterQuality: FilterQuality.high,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: ThemeService.barresLancement(),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: Container(
+          color: const Color(0xFF151C2C),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final haut = c.maxHeight / 2 + _hauteurLogo / 2 + 30;
+              return Stack(
+                children: [
+                  Center(
+                    child: Image.asset(
+                      'assets/images/splash_logo.png',
+                      width: _largeurLogo,
+                      filterQuality: FilterQuality.high,
+                    ),
+                  ),
+                  Positioned(
+                    top: haut,
+                    left: 32,
+                    right: 32,
+                    child: AnimatedOpacity(
+                      opacity: _phraseVisible ? 1 : 0,
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.easeOut,
+                      child: Column(
+                        children: [
+                          Text(
+                            'LE SAVIEZ-VOUS ?',
+                            style: TytoText.ui(
+                                    size: 11.5,
+                                    weight: FontWeight.w700,
+                                    color: TytoColors.fauve)
+                                .copyWith(
+                                    letterSpacing: 1.6,
+                                    decoration: TextDecoration.none),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            PhraseLancement.texte,
+                            textAlign: TextAlign.center,
+                            style: TytoText.body(size: 17, color: _ivoire)
+                                .copyWith(
+                                    height: 1.35,
+                                    decoration: TextDecoration.none),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }

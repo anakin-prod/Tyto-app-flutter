@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/colors.dart';
 import '../services/theme_service.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
+import '../services/icone_service.dart';
 import '../services/notification_service.dart';
 import '../widgets/delete_account_dialog.dart';
 import '../widgets/mot_de_passe_dialog.dart';
+import '../widgets/reglages_widgets.dart';
 import 'a_propos_screen.dart';
+import 'rappels_reglages_screen.dart';
 import 'signaler_screen.dart';
+import 'sons_reglages_screen.dart';
 
 /// La page Paramètres : en ivoire (et non en bleu nuit) pour rompre un peu
-/// avec le bleu des autres écrans. De haut en bas : le compte connecté, les
-/// conseils de saison, le blog, le changement de mot de passe, le signalement
-/// d'un problème, la suppression du compte et « À propos ».
+/// avec le bleu des autres écrans. De haut en bas : le compte connecté, puis
+/// trois groupes : Apparence (nuit, jour ou automatique, taille du texte,
+/// icône sur iPhone), Notifications (rappels, sons, conseils de saison) et
+/// Compte et aide (blog, mot de passe, signalement, À propos, suppression).
 class ParametresScreen extends StatefulWidget {
   const ParametresScreen({super.key});
 
@@ -27,28 +31,9 @@ class ParametresScreen extends StatefulWidget {
   State<ParametresScreen> createState() => _ParametresScreenState();
 }
 
-const _traceBlog = '<path d="M4.5 4.5h10a2 2 0 0 1 2 2v13h-10a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2z" />'
-    '<path d="M16.5 8.5h3v9a2 2 0 0 1-2 2M7 9h6M7 12.5h6" />';
-const _traceCle = '<circle cx="8" cy="15" r="4" />'
-    '<path d="M10.8 12.2 20 3M16 7l3 3M13.5 9.5l2 2" />';
-const _traceCorbeille = '<path d="M4 6.4h16" />'
-    '<path d="M9.4 6.4V4.6a1 1 0 0 1 1-1h3.2a1 1 0 0 1 1 1v1.8" />'
-    '<path d="M6.2 6.4 7 19.6a1.6 1.6 0 0 0 1.6 1.5h6.8a1.6 1.6 0 0 0 1.6-1.5l.8-13.2" />';
-const _traceCloche = '<path d="M6.4 16.4V11a5.6 5.6 0 0 1 11.2 0v5.4l1.6 1.8H4.8l1.6-1.8Z" />'
-    '<path d="M10 20.8a2.2 2.2 0 0 0 4 0" />';
-const _traceClocheBarree = '$_traceCloche<path d="M4.2 4.2 19.8 19.8" />';
-const _traceSignal = '<path d="M12 3.2 2.8 19.4a1.2 1.2 0 0 0 1 1.8h16.4a1.2 1.2 0 0 0 1-1.8L12 3.2Z" />'
-    '<path d="M12 9.6v4.4M12 17.2v.1" />';
-const _traceSoleil = '<circle cx="12" cy="12" r="4" />'
-    '<path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" />';
-const _traceLune = '<path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2Z" />';
-const _traceInfo = '<circle cx="12" cy="12" r="9" />'
-    '<path d="M12 11v5.2M12 7.8v.1" />';
-const _traceCompte = '<circle cx="12" cy="8.4" r="3.6" />'
-    '<path d="M4.6 20a7.4 7.4 0 0 1 14.8 0" />';
-
 class _ParametresScreenState extends State<ParametresScreen> {
   bool _saisonActive = true;
+  String _icone = 'nuit';
 
   @override
   void initState() {
@@ -56,74 +41,11 @@ class _ParametresScreenState extends State<ParametresScreen> {
     AlertesSaison.actives().then((v) {
       if (mounted) setState(() => _saisonActive = v);
     });
-  }
-
-  Widget _icone(String trace, Color couleur) => SvgPicture.string(
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '
-        'stroke="currentColor" stroke-width="1.7" stroke-linecap="round" '
-        'stroke-linejoin="round">$trace</svg>',
-        width: 18,
-        height: 18,
-        colorFilter: ColorFilter.mode(couleur, BlendMode.srcIn),
-      );
-
-  /// Une ligne : pastille d'icône, titre, sous-titre, bordure fine. Le
-  /// dernier élément (`fin`) remplace la flèche, par exemple par un interrupteur.
-  Widget _ligne({
-    required String trace,
-    required String titre,
-    required String sous,
-    VoidCallback? onTap,
-    Color? couleur,
-    Widget? fin,
-  }) {
-    final c = couleur ?? TytoColors.encre;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: TytoColors.champ.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: TytoColors.encre.withOpacity(0.14)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: c.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: c.withOpacity(0.2)),
-                  ),
-                  child: _icone(trace, c),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(titre, style: TytoText.ui(size: 15, weight: FontWeight.w700, color: c)),
-                      const SizedBox(height: 2),
-                      Text(sous,
-                          style: TytoText.ui(size: 12, weight: FontWeight.w400, color: TytoColors.encre.withOpacity(0.6))),
-                    ],
-                  ),
-                ),
-                fin ?? (onTap == null ? const SizedBox.shrink() : Icon(Icons.chevron_right_rounded, color: TytoColors.encre.withOpacity(0.4))),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+    if (IconeService.disponible) {
+      IconeService.actuelle().then((v) {
+        if (mounted) setState(() => _icone = v);
+      });
+    }
   }
 
   Future<void> _basculerSaison(bool nouveau) async {
@@ -132,13 +54,78 @@ class _ParametresScreenState extends State<ParametresScreen> {
     await NotificationService.reprogrammerSaisonDepuisMemoire();
   }
 
-  Future<void> _basculerMode(bool jour) async {
-    await ThemeService.definir(jour);
+  Future<void> _changerMode(ModeApparence mode) async {
+    await ThemeService.definirMode(mode);
     if (mounted) setState(() {});
+  }
+
+  Future<void> _changerTaille(TailleTexte taille) async {
+    await ThemeService.definirTaille(taille);
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _changerIcone(String choix) async {
+    if (choix == _icone) return;
+    final ok = await IconeService.definir(choix);
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _icone = choix);
+    } else {
+      _message("L'icône n'a pas pu être changée.");
+    }
   }
 
   void _message(String texte) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texte)));
+  }
+
+  String get _descriptionMode {
+    switch (ThemeService.mode) {
+      case ModeApparence.nuit:
+        return 'Fond bleu nuit, traits ivoire';
+      case ModeApparence.jour:
+        return 'Fond ivoire, traits bleus';
+      case ModeApparence.auto:
+        return TytoColors.jour
+            ? 'Suit le téléphone : il est en mode clair'
+            : 'Suit le téléphone : il est en mode sombre';
+    }
+  }
+
+  /// Une vignette d'icône à toucher (iPhone).
+  Widget _vignetteIcone(String choix, String nom, String image) {
+    final choisie = _icone == choix;
+    return GestureDetector(
+      onTap: () => _changerIcone(choix),
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: choisie ? TytoColors.fauve : Colors.transparent,
+                width: 2.5,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.asset(image, width: 64, height: 64, filterQuality: FilterQuality.high),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            nom,
+            style: TytoText.ui(
+              size: 13,
+              weight: FontWeight.w700,
+              color: choisie ? TytoColors.encre : TytoColors.encre.withOpacity(0.6),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -160,44 +147,91 @@ class _ParametresScreenState extends State<ParametresScreen> {
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
           children: [
             // Le compte connecté, tout en haut.
-            _ligne(
-              trace: _traceCompte,
+            LigneReglage(
+              trace: TracesReglage.compte,
               titre: connecte && email != null && email.isNotEmpty ? email : 'Visiteur',
               sous: connecte ? 'Compte connecté' : "Pas encore de compte : crée-le depuis le menu",
             ),
-            _ligne(
-              trace: TytoColors.jour ? _traceSoleil : _traceLune,
-              titre: 'Mode jour',
-              sous: TytoColors.jour ? 'Activé : fond ivoire, traits bleus' : 'Désactivé : fond bleu nuit, traits ivoire',
-              onTap: () => _basculerMode(!TytoColors.jour),
-              fin: Switch(
-                value: TytoColors.jour,
-                onChanged: _basculerMode,
-                activeColor: TytoColors.encre,
-                activeTrackColor: TytoColors.fauve,
+
+            const TitreSection('Apparence'),
+            LigneReglage(
+              trace: ThemeService.mode == ModeApparence.auto
+                  ? TracesReglage.contraste
+                  : (TytoColors.jour ? TracesReglage.soleil : TracesReglage.lune),
+              titre: 'Apparence',
+              sous: _descriptionMode,
+              bas: ChoixSegmente<ModeApparence>(
+                options: const [
+                  (ModeApparence.nuit, 'Nuit'),
+                  (ModeApparence.jour, 'Jour'),
+                  (ModeApparence.auto, 'Auto'),
+                ],
+                valeur: ThemeService.mode,
+                onChanged: _changerMode,
               ),
             ),
-            _ligne(
-              trace: _saisonActive ? _traceCloche : _traceClocheBarree,
+            LigneReglage(
+              trace: TracesReglage.texte,
+              titre: 'Taille du texte',
+              sous: 'Pour lire plus confortablement',
+              bas: ChoixSegmente<TailleTexte>(
+                options: [for (final t in TailleTexte.values) (t, t.libelle)],
+                valeur: ThemeService.taille.value,
+                onChanged: _changerTaille,
+              ),
+            ),
+            if (IconeService.disponible)
+              LigneReglage(
+                trace: TracesReglage.telephone,
+                titre: "Icône de l'appli",
+                sous: "Celle qui s'affiche sur l'écran d'accueil",
+                bas: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _vignetteIcone('nuit', 'Nuit', 'assets/images/icone_nuit.png'),
+                    const SizedBox(width: 28),
+                    _vignetteIcone('ivoire', 'Ivoire', 'assets/images/icone_ivoire.png'),
+                  ],
+                ),
+              ),
+
+            const TitreSection('Notifications'),
+            LigneReglage(
+              trace: TracesReglage.cloche,
+              titre: 'Rappels de santé',
+              sous: RappelsReglagesScreen.resume(),
+              onTap: () async {
+                await RappelsReglagesScreen.ouvrir(context);
+                if (mounted) setState(() {});
+              },
+            ),
+            LigneReglage(
+              trace: TracesReglage.hautParleur,
+              titre: 'Sons et vibrations',
+              sous: SonsReglagesScreen.resume(),
+              onTap: () async {
+                await SonsReglagesScreen.ouvrir(context);
+                if (mounted) setState(() {});
+              },
+            ),
+            LigneReglage(
+              trace: _saisonActive ? TracesReglage.cloche : TracesReglage.clocheBarree,
               titre: 'Conseils de saison',
               sous: _saisonActive ? 'Notifications activées' : 'Notifications désactivées',
               onTap: () => _basculerSaison(!_saisonActive),
-              fin: Switch(
-                value: _saisonActive,
-                onChanged: _basculerSaison,
-                activeColor: TytoColors.encre,
-                activeTrackColor: TytoColors.fauve,
-              ),
+              fin: InterrupteurReglage(valeur: _saisonActive, onChanged: _basculerSaison),
             ),
-            _ligne(
-              trace: _traceBlog,
+
+            const TitreSection('Compte et aide'),
+            LigneReglage(
+              trace: TracesReglage.blog,
               titre: 'Blog et guides',
               sous: 'Tous les articles',
               onTap: () => launchUrl(Uri.parse('https://tytoai.app/blog'), mode: LaunchMode.externalApplication),
             ),
             if (connecte)
-              _ligne(
-                trace: _traceCle,
+              LigneReglage(
+                trace: TracesReglage.cle,
                 titre: 'Changer mon mot de passe',
                 sous: 'Choisir un nouveau mot de passe',
                 onTap: () async {
@@ -205,8 +239,8 @@ class _ParametresScreenState extends State<ParametresScreen> {
                   if (ok == true && mounted) _message('Mot de passe mis à jour.');
                 },
               ),
-            _ligne(
-              trace: _traceSignal,
+            LigneReglage(
+              trace: TracesReglage.signal,
               titre: 'Signaler un problème',
               sous: "Un bug ou une erreur dans l'application",
               onTap: () async {
@@ -215,15 +249,15 @@ class _ParametresScreenState extends State<ParametresScreen> {
               },
             ),
             // Tout en bas : « À propos ».
-            _ligne(
-              trace: _traceInfo,
+            LigneReglage(
+              trace: TracesReglage.info,
               titre: 'À propos',
               sous: "Confidentialité et conditions d'utilisation",
               onTap: () => AProposScreen.ouvrir(context),
             ),
             if (connecte)
-              _ligne(
-                trace: _traceCorbeille,
+              LigneReglage(
+                trace: TracesReglage.corbeille,
                 titre: 'Supprimer mon compte',
                 sous: 'Effacer définitivement mes données',
                 couleur: TytoColors.surPapier(const Color(0xFFAA3333)),

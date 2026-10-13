@@ -4,6 +4,7 @@ import '../models/pet.dart';
 import '../models/soin.dart';
 import '../services/auth_service.dart';
 import '../services/soins_service.dart';
+import '../services/reglages_service.dart';
 import '../services/user_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -123,6 +124,7 @@ class _SoinsScreenState extends State<SoinsScreen> {
     setState(() => _occupe = true);
     try {
       await SoinsService.pointer(o, sautee: sauter);
+      Reglages.toucher();
       await _charger(silencieux: true);
     } catch (e) {
       if (mounted) messageSoin(context, "La prise n'a pas pu être enregistrée, réessaie.");

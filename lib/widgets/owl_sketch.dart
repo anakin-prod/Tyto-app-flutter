@@ -38,10 +38,12 @@ class OwlSketch extends StatefulWidget {
 class _OwlSketchState extends State<OwlSketch> with SingleTickerProviderStateMixin {
   late AnimationController _c;
 
-  // Les mêmes durées que l'animation "blink" du site.
+  // Quand elle réfléchit : la même durée que l'animation "blink" du site
+  // (1,7 s). Au repos, elle cligne un peu plus souvent que sur le site : toutes
+  // les 4 secondes environ au lieu de 6,5 s.
   Duration get _duree => widget.thinking
       ? const Duration(milliseconds: 1700)
-      : const Duration(milliseconds: 6500);
+      : const Duration(milliseconds: 4000);
 
   @override
   void initState() {
@@ -66,17 +68,19 @@ class _OwlSketchState extends State<OwlSketch> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  /// Les étapes exactes de "blink" : l'œil reste ouvert presque tout le
-  /// temps, puis s'écrase à 8 % de sa hauteur en un clin d'œil.
-  ///  0 % → 93 % : ouvert
-  ///  95,5 %      : fermé (0.08)
-  ///  100 %       : rouvert
+  /// Un clignement : l'œil reste ouvert presque tout le temps, puis s'écrase
+  /// à 8 % de sa hauteur en un clin d'œil. Le clignement lui-même dure
+  /// toujours 0,455 s (comme sur le site, où il occupe 7 % de 6,5 s), que le
+  /// cycle soit court ou long : seul l'intervalle entre deux clignements change.
   double _ouvertureOeil(double t) {
-    const debut = 0.93, creux = 0.955, fin = 1.0;
+    final d = _duree.inMilliseconds.toDouble();
+    final clignement = widget.thinking ? 0.07 * d : 455.0;
+    final debut = 1 - clignement / d;
+    final creux = debut + clignement * (25 / 70) / d; // il se ferme vite, se rouvre plus doucement
     const ferme = 0.08;
     if (t < debut) return 1;
     if (t < creux) return 1 - (1 - ferme) * ((t - debut) / (creux - debut));
-    return ferme + (1 - ferme) * ((t - creux) / (fin - creux));
+    return ferme + (1 - ferme) * ((t - creux) / (1 - creux));
   }
 
   /// Les traits sont un peu épaissis : à petite taille, le tracé fin d'origine

@@ -9,7 +9,10 @@ générer par Flutter, puis y règle tout ce que Tyto demande :
   - les permissions : appareil photo, photos, micro, dictée vocale
   - le lien de connexion par email (app.tytoai.twa://login-callback)
   - iPhone seulement (pas de captures d'iPad à fournir)
-  - l'icône 1024x1024 (ios_setup/icone-1024.png)
+  - l'icône 1024x1024 (ios_setup/icone-1024.png) et une icône au choix, ivoire
+    (ios_setup/icone-ivoire-1024.png), changeable depuis Paramètres
+  - deux petits ponts Swift : le changement d'icône, et le son de la chouette
+    à l'envoi d'un message
   - la notification au premier plan (UNUserNotificationCenter)
   - un écran de démarrage sombre, comme l'app (pas de flash blanc)
   - « pas de chiffrement soumis à déclaration » (évite une question à chaque envoi)
@@ -210,6 +213,171 @@ def regler_icone():
 
 
 # ------------------------------------------------------------------
+NOM_ICONE_IVOIRE = "AppIcon-Ivoire"
+CANAL_ICONE = "app.tytoai/icone"
+
+# Le code Swift des petits « ponts » entre l'appli et iOS. Il est ajouté tel
+# quel à la fin d'AppDelegate.swift : pas de nouveau fichier à déclarer dans
+# Xcode, et pas de paquet externe.
+#   - IconeAlternativePlugin : change l'icône (Paramètres > Icône de l'appli)
+#   - SonInterfacePlugin : joue le « hou » de la chouette à l'envoi d'un message
+CODE_SWIFT_ICONE = """
+// --- Icône de l'appli au choix (Paramètres) : ajouté par prepare_ios.py ---
+class IconeAlternativePlugin: NSObject, FlutterPlugin {
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let canal = FlutterMethodChannel(name: "%s", binaryMessenger: registrar.messenger())
+    registrar.addMethodCallDelegate(IconeAlternativePlugin(), channel: canal)
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "actuelle":
+      result(UIApplication.shared.alternateIconName)
+    case "definir":
+      guard UIApplication.shared.supportsAlternateIcons else {
+        result(FlutterError(code: "non_supporte", message: "Icônes alternatives non supportées", details: nil))
+        return
+      }
+      let nom = call.arguments as? String
+      UIApplication.shared.setAlternateIconName(nom) { erreur in
+        if let erreur = erreur {
+          result(FlutterError(code: "echec", message: erreur.localizedDescription, details: nil))
+        } else {
+          result(nil)
+        }
+      }
+    default:
+      result(FlutterMethodNotImplemented)
+    }
+  }
+}
+""" % CANAL_ICONE
+
+CANAL_SON = "app.tytoai/son"
+
+# Les sons sont copiés par l'appli dans Library/Sounds au lancement (comme pour
+# les sons de notification) : on les y retrouve par leur nom.
+CODE_SWIFT_SON = """
+// --- Petit son de l'appli (chouette à l'envoi d'un message) : ajouté par prepare_ios.py ---
+class SonInterfacePlugin: NSObject, FlutterPlugin {
+  private var identifiants: [String: SystemSoundID] = [:]
+
+  static func register(with registrar: FlutterPluginRegistrar) {
+    let canal = FlutterMethodChannel(name: "%s", binaryMessenger: registrar.messenger())
+    registrar.addMethodCallDelegate(SonInterfacePlugin(), channel: canal)
+  }
+
+  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    guard call.method == "jouer" else {
+      result(FlutterMethodNotImplemented)
+      return
+    }
+    let arguments = call.arguments as? [String: Any]
+    guard let nom = arguments?["nom"] as? String else {
+      result(nil)
+      return
+    }
+    if identifiants[nom] == nil {
+      if let bibliotheque = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask).first {
+        let fichier = bibliotheque.appendingPathComponent("Sounds").appendingPathComponent(nom + ".wav")
+        if FileManager.default.fileExists(atPath: fichier.path) {
+          var identifiant: SystemSoundID = 0
+          if AudioServicesCreateSystemSoundID(fichier as CFURL, &identifiant) == kAudioServicesNoError {
+            identifiants[nom] = identifiant
+          }
+        }
+      }
+    }
+    if let identifiant = identifiants[nom] {
+      AudioServicesPlaySystemSound(identifiant)
+    }
+    result(nil)
+  }
+}
+""" % CANAL_SON
+
+PONTS_SWIFT = [
+    ("IconeAlternativePlugin", CODE_SWIFT_ICONE),
+    ("SonInterfacePlugin", CODE_SWIFT_SON),
+]
+
+
+def ajouter_ponts_swift():
+    print("5c) Ponts Swift (icône, son)")
+    chemin = os.path.join(RUNNER, "AppDelegate.swift")
+    if not os.path.isfile(chemin):
+        avertir("AppDelegate.swift introuvable : ni le changement d'icône ni le son d'envoi ne marcheront")
+        return
+    swift = lire(chemin)
+    m = re.search(r"^([ \t]*)GeneratedPluginRegistrant\.register\(with: (.+)\)\s*$", swift, re.M)
+    if not m:
+        avertir("ligne d'enregistrement des plugins non trouvée : ni le changement d'icône ni le son d'envoi ne marcheront")
+        return
+    indent, registre = m.group(1), m.group(2)
+    modifie = False
+    for nom, code in PONTS_SWIFT:
+        if nom in swift:
+            info(f"{nom} déjà présent")
+            continue
+        m = re.search(r"^([ \t]*)GeneratedPluginRegistrant\.register\(with: (.+)\)\s*$", swift, re.M)
+        ajout = (
+            "\n" + indent + "if let r = (" + registre + ').registrar(forPlugin: "' + nom + '") {\n'
+            + indent + "  " + nom + ".register(with: r)\n"
+            + indent + "}"
+        )
+        swift = swift[: m.end()].rstrip("\n") + ajout + swift[m.end():]
+        swift = swift.rstrip("\n") + "\n" + code
+        modifie = True
+        info(f"{nom} ajouté")
+    # Le son utilise AudioToolbox.
+    if modifie and "import AudioToolbox" not in swift:
+        swift = swift.replace("import UIKit", "import UIKit\nimport AudioToolbox", 1)
+    if modifie:
+        ecrire(chemin, swift)
+
+
+def regler_icone_alternative():
+    print("5b) Icône au choix (ivoire)")
+    source = os.path.join(ROOT, "ios_setup", "icone-ivoire-1024.png")
+    catalogue = os.path.join(RUNNER, "Assets.xcassets")
+    if not os.path.isfile(source):
+        avertir("ios_setup/icone-ivoire-1024.png introuvable : pas d'icône au choix")
+        return
+    if not os.path.isdir(catalogue):
+        avertir("Assets.xcassets introuvable : pas d'icône au choix")
+        return
+
+    # 1) le jeu d'icônes alternatif, à côté de AppIcon
+    dossier = os.path.join(catalogue, NOM_ICONE_IVOIRE + ".appiconset")
+    os.makedirs(dossier, exist_ok=True)
+    shutil.copyfile(source, os.path.join(dossier, "icon-1024.png"))
+    contenu = {
+        "images": [{"filename": "icon-1024.png", "idiom": "universal", "platform": "ios", "size": "1024x1024"}],
+        "info": {"author": "xcode", "version": 1},
+    }
+    ecrire(os.path.join(dossier, "Contents.json"), json.dumps(contenu, indent=2) + "\n")
+    info("jeu d'icônes " + NOM_ICONE_IVOIRE + " en place")
+
+    # 2) le réglage Xcode qui déclare cette icône comme alternative
+    chemin = os.path.join(IOS, "Runner.xcodeproj", "project.pbxproj")
+    pbx = lire(chemin)
+    if "ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES" in pbx:
+        info("réglage Xcode déjà présent")
+    else:
+        pbx, nb = re.subn(
+            r"(\t+)(ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;)",
+            lambda m: m.group(1) + m.group(2) + "\n" + m.group(1)
+            + 'ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "' + NOM_ICONE_IVOIRE + '";',
+            pbx,
+        )
+        if nb == 0:
+            avertir("réglage d'icône non trouvé dans le projet Xcode : l'icône ivoire ne sera pas proposée")
+        else:
+            ecrire(chemin, pbx)
+            info(f"réglage Xcode ajouté ({nb} configuration(s))")
+
+
+# ------------------------------------------------------------------
 def regler_ecran_demarrage():
     print("6) Écran de démarrage")
     chemin = os.path.join(RUNNER, "Base.lproj", "LaunchScreen.storyboard")
@@ -265,6 +433,8 @@ if __name__ == "__main__":
     regler_info_plist()
     regler_appdelegate()
     regler_icone()
+    regler_icone_alternative()
+    ajouter_ponts_swift()
     regler_ecran_demarrage()
     injecter_achats()
     print("Terminé.")
