@@ -18,6 +18,11 @@ class OwlSketch extends StatefulWidget {
   /// affichés par défaut ; on peut les retirer aux très petites tailles.
   final bool detail;
 
+  /// Pour les très petits logos (sans [detail]) : garde quand même le
+  /// perchoir et les pattes, dessinés un peu plus épais pour rester visibles,
+  /// sans les plumes. Le logo garde ainsi sa silhouette perchée.
+  final bool perchoirEtPattes;
+
   /// Quand Tyto réfléchit, elle cligne beaucoup plus vite (1,7 s au lieu
   /// de 6,5 s) — exactement comme sur le site.
   final bool thinking;
@@ -28,6 +33,7 @@ class OwlSketch extends StatefulWidget {
     this.ink,
     this.eyeColor,
     this.detail = true,
+    this.perchoirEtPattes = false,
     this.thinking = false,
   });
 
@@ -97,9 +103,14 @@ class _OwlSketchState extends State<OwlSketch> with SingleTickerProviderStateMix
     final yeux = widget.eyeColor == null
         ? hex
         : '#${widget.eyeColor!.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+    // Petit logo : le perchoir et les pattes sont tracés plus épais (trait de
+    // 2,6 au lieu de 1,6 / 1,3), sinon ils disparaissent à 17-19 px.
+    final petit = !widget.detail && widget.perchoirEtPattes;
     final perch = widget.detail
         ? '<path d="M20 145 C40 140.5, 84 141.5, 101 144.5" stroke="$hex" stroke-width="1.6" stroke-linecap="round" opacity="0.65" />'
-        : '';
+        : petit
+            ? '<path d="M20 145 C40 140.5, 84 141.5, 101 144.5" stroke="$hex" stroke-width="2.6" stroke-linecap="round" opacity="0.8" />'
+            : '';
 
     final plumes = widget.detail
         ? '''
@@ -111,9 +122,9 @@ class _OwlSketchState extends State<OwlSketch> with SingleTickerProviderStateMix
 </g>'''
         : '';
 
-    final pattes = widget.detail
+    final pattes = (widget.detail || petit)
         ? '''
-<g stroke="$hex" stroke-width="1.3" stroke-linecap="round">
+<g stroke="$hex" stroke-width="${petit ? '2.6' : '1.3'}" stroke-linecap="round">
   <path d="M52 130 L50 141 M50 141 L46 146 M50 141 L50 147 M50 141 L54 146" />
   <path d="M68 130 L70 141 M70 141 L66 146 M70 141 L70 147 M70 141 L74 146" />
 </g>'''

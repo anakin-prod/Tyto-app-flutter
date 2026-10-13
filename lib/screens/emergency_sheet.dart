@@ -58,6 +58,8 @@ class _EmergencySheetState extends State<EmergencySheet> {
     final token = AuthService.currentSession?.accessToken;
     if (token == null) return;
 
+    // Le clavier se baisse tout seul : il cacherait la réponse de Tyto.
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() {
       _loading = true;
       _result = null;
@@ -92,6 +94,7 @@ class _EmergencySheetState extends State<EmergencySheet> {
     final token = AuthService.currentSession?.accessToken;
     if (token == null) return;
 
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _loading = true);
     EmergencyResult? r;
     try {
@@ -181,12 +184,20 @@ class _EmergencySheetState extends State<EmergencySheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // Toucher le voile (ou le texte) en dehors du champ baisse le clavier.
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
       // Le voile du site : rgba(10,14,24,0.93)
       backgroundColor: const Color(0xED0A0E18),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, contraintes) => SingleChildScrollView(
+            // Le clavier se baisse en faisant glisser la fenêtre, même quand
+            // tout tient à l'écran.
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             child: ConstrainedBox(
               constraints: BoxConstraints(minHeight: math.max(0.0, contraintes.maxHeight - 32)),
@@ -208,7 +219,7 @@ class _EmergencySheetState extends State<EmergencySheet> {
           ),
         ),
       ),
-    );
+    ));
   }
 
   Widget _entete() {

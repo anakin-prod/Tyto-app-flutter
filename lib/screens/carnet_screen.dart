@@ -378,6 +378,7 @@ class _CarnetScreenState extends State<CarnetScreen> {
           titre: "Journal d'observations",
           debut: 'Note au quotidien l’appétit, l’humeur, la démarche de ton compagnon et retrouve tout dans son carnet. C’est une fonction ');
     }
+    FocusManager.instance.primaryFocus?.unfocus();
     setState(() => _obsEnvoi = true);
     try {
       await DataService.saveEvent(

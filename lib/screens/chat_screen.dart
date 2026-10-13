@@ -597,6 +597,11 @@ class _ChatScreenState extends State<ChatScreen>
       return;
     }
 
+    // Le clavier se baisse tout seul à l'envoi (bouton, touche « envoyer » du
+    // clavier ou suggestion) : il cacherait la réponse de Tyto.
+    final clavierOuvert = MediaQuery.viewInsetsOf(context).bottom > 0;
+    FocusManager.instance.primaryFocus?.unfocus();
+
     final photoEnvoyee = _photoCompressee;
     // Une photo seule part avec la même phrase que sur le site.
     final contenu = text.isEmpty ? 'Analyse cette photo.' : text;
@@ -620,6 +625,13 @@ class _ChatScreenState extends State<ChatScreen>
     Reglages.toucher();
     SonService.jouerEnvoi();
     _scrollToBottom();
+    // Le clavier met environ 0,3 s à descendre : on recale le bas du fil une
+    // fois qu'il a fini, sinon la dernière question reste à moitié cachée.
+    if (clavierOuvert) {
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted) _scrollToBottom();
+      });
+    }
     // Sauvegardé au fil de l'eau, comme sur le site : rien n'est perdu
     // si l'app se ferme en cours de route.
     DataService.saveMessage(
@@ -1825,7 +1837,11 @@ class _ChatScreenState extends State<ChatScreen>
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                OwlSketch(size: 17, ink: TytoColors.encre, detail: false),
+                OwlSketch(
+                    size: 17,
+                    ink: TytoColors.encre,
+                    detail: false,
+                    perchoirEtPattes: true),
                 const SizedBox(width: 7),
                 Text(
                   'TYTO',
@@ -1869,7 +1885,11 @@ class _ChatScreenState extends State<ChatScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             OwlSketch(
-                size: 19, ink: TytoColors.encre, detail: false, thinking: true),
+                size: 19,
+                ink: TytoColors.encre,
+                detail: false,
+                perchoirEtPattes: true,
+                thinking: true),
             const SizedBox(width: 9),
             Text(
               'Tyto observe',
@@ -1959,6 +1979,8 @@ class _ChatScreenState extends State<ChatScreen>
     ];
     return ListView(
       controller: _scrollController,
+      // Le clavier se baisse en faisant glisser la conversation.
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: EdgeInsets.fromLTRB(_marge, 8, _marge, 24),
       children: [
         _hautDuFil(),
@@ -2550,6 +2572,7 @@ class _ChatScreenState extends State<ChatScreen>
         media.size.height - media.padding.top - media.padding.bottom - 380;
     return SingleChildScrollView(
       controller: _scrollAccueil,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: EdgeInsets.fromLTRB(_marge, 8, _marge, 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
