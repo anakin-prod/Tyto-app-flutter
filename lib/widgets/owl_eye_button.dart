@@ -11,7 +11,8 @@ class OwlEyeButton extends StatefulWidget {
   /// du site — il ne réagit plus au toucher.
   final VoidCallback? onTap;
 
-  /// Le côté du dessin de l'œil (19 px sur le site).
+  /// Le côté du dessin de l'œil : 22 px (19 px sur le site), un peu plus grand
+  /// pour qu'il se voie mieux dans le rond de 38 px.
   final double size;
 
   /// La fonction est-elle accessible (Premium) ? Sur le site, l'œil reste
@@ -21,7 +22,7 @@ class OwlEyeButton extends StatefulWidget {
   const OwlEyeButton({
     super.key,
     required this.onTap,
-    this.size = 19,
+    this.size = 22,
     this.actif = true,
   });
 

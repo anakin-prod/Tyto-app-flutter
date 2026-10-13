@@ -832,7 +832,9 @@ class _CarnetScreenState extends State<CarnetScreen> {
   Widget _boutonFantome(_Fantome a) {
     final couleur = a.vert ? TytoColors.vert : TytoColors.brume;
     final bord = a.vert ? TytoColors.vert.withAlpha(0x88) : TytoColors.lune.withAlpha(0x33);
-    final texte = TytoText.ui(size: 13, weight: FontWeight.w400, color: couleur);
+    // Ligne de 15 px pour 13 px de texte (comme la ligne mesurée sur le site) : le texte
+    // tient exactement dans la hauteur du bouton, à toutes les tailles de texte.
+    final texte = interligne(TytoText.ui(size: 13, weight: FontWeight.w400, color: couleur), 15 / 13);
     return TableauBouton(
       onTap: a.charge ? null : a.onTap,
       bord: bord,
@@ -852,7 +854,7 @@ class _CarnetScreenState extends State<CarnetScreen> {
             SiteIcon(a.icone, size: 14, color: couleur),
             const SizedBox(width: 5),
             Flexible(
-              child: Text(a.texte, maxLines: 1, softWrap: false, overflow: TextOverflow.fade, style: texte),
+              child: Text(a.texte, maxLines: 1, softWrap: false, overflow: TextOverflow.ellipsis, style: texte),
             ),
           ],
           // Le cadenas rappelle que la fonction demande le plan Pro.

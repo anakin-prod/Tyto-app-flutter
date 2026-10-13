@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
@@ -100,12 +101,16 @@ class _TableauBoutonState extends State<TableauBouton> {
   @override
   Widget build(BuildContext context) {
     final double? facteur = widget.pleineLargeur ? null : 1.0;
+    // Les hauteurs mesurées sur le site valent pour un texte à 100 %. Quand le
+    // texte est agrandi (réglage de l'appli ou taille de texte de l'iPhone),
+    // elles grandissent avec lui : sinon le libellé est coupé en bas.
+    final echelle = math.max(1.0, MediaQuery.textScalerOf(context).scale(14) / 14);
     Widget contenu = Center(widthFactor: facteur, heightFactor: 1.0, child: widget.child);
-    final ligne = widget.hauteurLigne;
+    final ligne = widget.hauteurLigne == null ? null : widget.hauteurLigne! * echelle;
     if (ligne != null) {
       contenu = SizedBox(height: ligne, child: Center(widthFactor: facteur, child: widget.child));
     }
-    final zone = widget.hauteurContenu;
+    final zone = widget.hauteurContenu == null ? null : widget.hauteurContenu! * echelle;
     if (zone != null) {
       contenu = SizedBox(
         height: zone,
@@ -114,7 +119,7 @@ class _TableauBoutonState extends State<TableauBouton> {
     }
     final bord = widget.bord;
     Widget corps = Container(
-      height: widget.hauteur,
+      height: widget.hauteur == null ? null : widget.hauteur! * echelle,
       padding: widget.padding,
       alignment: widget.hauteur != null ? Alignment.center : null,
       decoration: BoxDecoration(
