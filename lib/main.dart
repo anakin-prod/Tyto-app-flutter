@@ -86,7 +86,7 @@ class TytoApp extends StatelessWidget {
         // Les écrans sont transparents (le fond est posé derrière) : sans ça,
         // l'ancien écran restait visible pendant la transition. Chaque
         // nouvel écran arrive donc avec son propre fond, opaque.
-        pageTransitionsTheme: const PageTransitionsTheme(builders: {
+        pageTransitionsTheme: PageTransitionsTheme(builders: {
           TargetPlatform.iOS: _TransitionOpaque(CupertinoPageTransitionsBuilder()),
           TargetPlatform.android: _TransitionOpaque(FadeUpwardsPageTransitionsBuilder()),
         }),
