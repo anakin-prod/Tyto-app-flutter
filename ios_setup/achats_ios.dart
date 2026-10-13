@@ -22,6 +22,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../screens/login_screen.dart';
 import '../services/auth_service.dart';
 import '../services/legal_service.dart';
+import '../services/user_service.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 
@@ -130,6 +131,9 @@ class _PaywallPageState extends State<_PaywallPage> {
   String? _enCours; // identifiant du paquet en cours d'achat
   bool _restauration = false;
   String? _actif; // 'pro', 'premium' ou null (gratuit)
+  // Vrai si l'abonnement actuel a été pris via l'App Store (donc modifiable ici).
+  // Faux s'il vient du site ou a été donné à la main : on ne le double pas.
+  bool _viaApple = false;
 
   @override
   void initState() {
@@ -140,14 +144,29 @@ class _PaywallPageState extends State<_PaywallPage> {
   Future<void> _charger() async {
     try {
       final offerings = await Purchases.getOfferings();
+      String? actif;
       try {
         final info = await Purchases.getCustomerInfo();
         if (info.entitlements.all['pro']?.isActive ?? false) {
-          _actif = 'pro';
+          actif = 'pro';
+          _viaApple = true;
         } else if (info.entitlements.all['premium']?.isActive ?? false) {
-          _actif = 'premium';
+          actif = 'premium';
+          _viaApple = true;
         }
       } catch (_) {}
+      // Le serveur connaît aussi les abonnements pris sur le site et ceux
+      // donnés à la main : sans lui, un compte Pro verrait « Gratuit » comme
+      // offre actuelle et pourrait racheter un abonnement.
+      try {
+        final jeton = AuthService.currentSession?.accessToken;
+        if (jeton != null) {
+          final profil = await UserService.fetchMe(jeton);
+          final serveur = profil.pro ? 'pro' : (profil.premium ? 'premium' : null);
+          if (serveur == 'pro' || (serveur == 'premium' && actif == null)) actif = serveur;
+        }
+      } catch (_) {}
+      _actif = actif;
       final paquets = List<Package>.of(offerings.current?.availablePackages ?? const <Package>[]);
       // Du moins cher au plus cher : Premium avant Pro.
       paquets.sort((a, b) => a.storeProduct.price.compareTo(b.storeProduct.price));
@@ -167,8 +186,18 @@ class _PaywallPageState extends State<_PaywallPage> {
     }
   }
 
+  /// Peut-on acheter ce plan depuis cet écran ? Oui si la personne est
+  /// gratuite, ou si elle passe de Premium (pris sur l'App Store) à Pro.
+  /// Jamais le plan qu'elle a déjà, ni un plan inférieur, ni un deuxième
+  /// abonnement quand le sien vient d'ailleurs.
+  bool _achetable(Package p) {
+    final estPro = p.storeProduct.identifier.toLowerCase().contains('pro');
+    if (_actif == null) return true;
+    return _viaApple && _actif == 'premium' && estPro;
+  }
+
   Future<void> _acheter(Package paquet) async {
-    if (_enCours != null || _restauration) return;
+    if (_enCours != null || _restauration || !_achetable(paquet)) return;
     setState(() {
       _enCours = paquet.identifier;
       _erreur = null;
@@ -319,6 +348,12 @@ class _PaywallPageState extends State<_PaywallPage> {
     final accent = estPro ? const Color(0xFF7FB2A6) : TytoColors.fauve;
     final texteBouton = estPro ? const Color(0xFF0F2A24) : TytoColors.nuit;
     final courant = _actif == (estPro ? 'pro' : 'premium');
+    final peutAcheter = _achetable(p);
+    final etiquetteBouton = courant
+        ? 'Offre en cours'
+        : peutAcheter
+            ? (estPro ? 'Passer Pro' : 'Passer Premium')
+            : (_actif == 'pro' ? 'Inclus dans votre offre' : 'Non modifiable ici');
     final badge = courant ? 'Votre offre actuelle' : (estPro ? 'Professionnels' : 'Le plus choisi');
     final accroche = estPro
         ? 'Pour les refuges, éleveurs, pensions et pet-sitters qui gèrent plusieurs animaux au quotidien.'
@@ -404,7 +439,7 @@ class _PaywallPageState extends State<_PaywallPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: (_enCours != null || _restauration || courant) ? null : () => _acheter(p),
+                    onPressed: (_enCours != null || _restauration || !peutAcheter) ? null : () => _acheter(p),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: accent,
                       disabledBackgroundColor: accent.withOpacity(0.4),
@@ -414,7 +449,7 @@ class _PaywallPageState extends State<_PaywallPage> {
                     ),
                     child: occupe
                         ? SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: texteBouton))
-                        : Text(courant ? 'Offre en cours' : (estPro ? 'Passer Pro' : 'Passer Premium'),
+                        : Text(etiquetteBouton,
                             style: TytoText.ui(size: 14.5, weight: FontWeight.w700, color: texteBouton)),
                   ),
                 ),
@@ -479,6 +514,15 @@ class _PaywallPageState extends State<_PaywallPage> {
                   ),
                   _carteGratuit(),
                   for (final p in _offres!) _carte(p),
+                  if (_actif != null && !_viaApple)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Text(
+                        "Ton abonnement a été souscrit en dehors de l'App Store : il ne peut pas être modifié depuis cet écran.",
+                        textAlign: TextAlign.center,
+                        style: TytoText.ui(size: 12.5, color: TytoColors.brume).copyWith(height: 1.45),
+                      ),
+                    ),
                   if (_erreur != null)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 10),

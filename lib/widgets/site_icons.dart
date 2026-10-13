@@ -30,11 +30,12 @@ class SiteIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final svg = siteIcons[name] ?? siteIcons['IconPaw']!;
+    final c = color ?? TytoColors.lune;
     return SvgPicture.string(
-      svg,
+      TytoColors.epaissirSvg(svg, c),
       width: size,
       height: size,
-      colorFilter: ColorFilter.mode(color ?? TytoColors.lune, BlendMode.srcIn),
+      colorFilter: ColorFilter.mode(c, BlendMode.srcIn),
     );
   }
 }

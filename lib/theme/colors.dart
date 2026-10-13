@@ -25,7 +25,10 @@ class TytoColors {
   static Color get nuitProfonde => jour ? const Color(0xFFE6DDC6) : const Color(0xFF0A0E18);
   static Color get brume => jour ? const Color(0xFF5C667F) : const Color(0xFF98A1B6);
   static Color get vert => jour ? const Color(0xFF4B8F80) : const Color(0xFF7FB2A6);
-  static Color get lune => jour ? nuit : const Color(0xFFEDE7D6);
+  /// En mode jour, le trait bleu est un bleu un peu plus vif que le bleu nuit
+  /// du fond : le bleu nuit, quasi noir, paraissait noir sur l'ivoire.
+  static const _bleuTrait = Color(0xFF1B2B52);
+  static Color get lune => jour ? _bleuTrait : const Color(0xFFEDE7D6);
 
   /// Le papier des réponses de Tyto et des fenêtres, et l'encre dessus :
   /// ivoire et brun en mode nuit, bleu et ivoire en mode jour.
@@ -39,6 +42,25 @@ class TytoColors {
   /// éclaircie en mode jour pour rester lisible sur le papier bleu.
   static Color surPapier(Color c) =>
       jour ? Color.lerp(c, const Color(0xFFEDE7D6), 0.55)! : c;
+
+  /// En mode jour, un trait fin et sombre sur fond clair paraît noir : on
+  /// épaissit donc les traits BLEUS (dessins et textes) sur l'ivoire. Les
+  /// traits ivoire sur fond bleu (mode nuit, ou papier bleu du mode jour) et
+  /// les traits dorés ne changent jamais.
+  static bool estTraitSombre(Color c) => jour && c.computeLuminance() < 0.35;
+
+  /// Le coefficient d'épaisseur des dessins pour cette couleur de trait.
+  static double epaisseur(Color c) => estTraitSombre(c) ? 1.35 : 1.0;
+
+  /// Épaissit les `stroke-width` d'un SVG quand on le dessine en bleu sur ivoire.
+  static String epaissirSvg(String svg, Color c) {
+    final k = epaisseur(c);
+    if (k == 1.0) return svg;
+    return svg.replaceAllMapped(
+      RegExp(r'stroke-width="([0-9.]+)"'),
+      (m) => 'stroke-width="${(double.parse(m[1]!) * k).toStringAsFixed(2)}"',
+    );
+  }
 
   /// Le fond du site : une lueur douce en haut à droite qui se fond vers le fond.
   static RadialGradient get fondApp => RadialGradient(

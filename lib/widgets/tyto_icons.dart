@@ -243,11 +243,12 @@ class TytoIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = color ?? TytoColors.lune;
     return SvgPicture.string(
-      _svg,
+      TytoColors.epaissirSvg(_svg, c),
       width: size * _ratio,
       height: size,
-      colorFilter: ColorFilter.mode(color ?? TytoColors.lune, BlendMode.srcIn),
+      colorFilter: ColorFilter.mode(c, BlendMode.srcIn),
     );
   }
 }

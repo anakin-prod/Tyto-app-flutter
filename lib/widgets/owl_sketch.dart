@@ -82,7 +82,7 @@ class _OwlSketchState extends State<OwlSketch> with SingleTickerProviderStateMix
   /// Les traits sont un peu épaissis : à petite taille, le tracé fin d'origine
   /// se pixélise. Le gain est plus fort pour les petits logos.
   String _epaissir(String svg) {
-    final k = widget.size <= 60 ? 1.3 : 1.15;
+    final k = (widget.size <= 60 ? 1.3 : 1.15) * TytoColors.epaisseur(widget.ink ?? TytoColors.lune);
     return svg.replaceAllMapped(RegExp(r'stroke-width="([0-9.]+)"'),
         (m) => 'stroke-width="${(double.parse(m[1]!) * k).toStringAsFixed(2)}"');
   }

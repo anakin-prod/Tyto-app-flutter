@@ -63,7 +63,7 @@ const _svgCoche = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 13 13">'
 Widget _trace(String inner, {required double size, required Color color, double strokeWidth = 1.6, bool joinRond = true}) {
   return SvgPicture.string(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
-    'stroke-width="$strokeWidth" stroke-linecap="round"${joinRond ? ' stroke-linejoin="round"' : ''}>$inner</svg>',
+    'stroke-width="${(strokeWidth * TytoColors.epaisseur(color)).toStringAsFixed(2)}" stroke-linecap="round"${joinRond ? ' stroke-linejoin="round"' : ''}>$inner</svg>',
     width: size,
     height: size,
     colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
