@@ -11,7 +11,8 @@ import 'services/notification_service.dart';
 
 // Attention : ce ne sont PAS des clés secrètes, elles sont faites pour être publiques.
 const String supabaseUrl = 'https://wtmlzrtbsxlwyxpnimee.supabase.co';
-const String supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bWx6cnRic3hsd3l4cG5pbWVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2OTY3MjUsImV4cCI6MjA5OTI3MjcyNX0.H1BEW0OCQRYhBUga5ExX8ByVoMd_6OqVly6THp6ujNw';
+const String supabaseAnonKey =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0bWx6cnRic3hsd3l4cG5pbWVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2OTY3MjUsImV4cCI6MjA5OTI3MjcyNX0.H1BEW0OCQRYhBUga5ExX8ByVoMd_6OqVly6THp6ujNw';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,11 +37,25 @@ class TytoScrollBehavior extends MaterialScrollBehavior {
   const TytoScrollBehavior();
 
   @override
-  Widget buildScrollbar(BuildContext context, Widget child, ScrollableDetails details) {
-    if (details.direction == AxisDirection.left || details.direction == AxisDirection.right) {
+  Widget buildScrollbar(
+      BuildContext context, Widget child, ScrollableDetails details) {
+    if (details.direction == AxisDirection.left ||
+        details.direction == AxisDirection.right) {
       return child;
     }
-    return Scrollbar(controller: details.controller, child: child);
+    // Sur iPhone, la barre Material devient une barre iOS grise, qui ignore
+    // le thème : on dessine donc la nôtre, la même partout, comme celle du
+    // site (5 px, or à 40 %, bouts arrondis).
+    return RawScrollbar(
+      controller: details.controller,
+      thumbColor: TytoColors.fauve.withOpacity(0.4),
+      thickness: 5,
+      radius: const Radius.circular(10),
+      crossAxisMargin: 2,
+      interactive: true,
+      thumbVisibility: false,
+      child: child,
+    );
   }
 }
 
@@ -79,7 +94,8 @@ class TytoApp extends StatelessWidget {
       scrollBehavior: const TytoScrollBehavior(),
       // Le dégradé du site est posé une fois pour toutes derrière chaque
       // écran, plutôt que répété dans chacun d'eux.
-      builder: (context, child) => TytoBackground(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) =>
+          TytoBackground(child: child ?? const SizedBox.shrink()),
       theme: ThemeData(
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.transparent,
@@ -87,8 +103,10 @@ class TytoApp extends StatelessWidget {
         // l'ancien écran restait visible pendant la transition. Chaque
         // nouvel écran arrive donc avec son propre fond, opaque.
         pageTransitionsTheme: PageTransitionsTheme(builders: {
-          TargetPlatform.iOS: _TransitionOpaque(CupertinoPageTransitionsBuilder()),
-          TargetPlatform.android: _TransitionOpaque(FadeUpwardsPageTransitionsBuilder()),
+          TargetPlatform.iOS:
+              _TransitionOpaque(CupertinoPageTransitionsBuilder()),
+          TargetPlatform.android:
+              _TransitionOpaque(FadeUpwardsPageTransitionsBuilder()),
         }),
         colorScheme: ColorScheme.dark(
           primary: TytoColors.fauve,
@@ -96,7 +114,8 @@ class TytoApp extends StatelessWidget {
           surface: TytoColors.nuit2,
         ),
         scrollbarTheme: ScrollbarThemeData(
-          thumbColor: WidgetStatePropertyAll(TytoColors.fauve.withOpacity(0.55)),
+          thumbColor:
+              WidgetStatePropertyAll(TytoColors.fauve.withOpacity(0.55)),
           trackColor: const WidgetStatePropertyAll(Colors.transparent),
           thickness: const WidgetStatePropertyAll(4),
           radius: const Radius.circular(10),
@@ -105,13 +124,16 @@ class TytoApp extends StatelessWidget {
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent, // sans ça, Flutter grise légèrement le fond
+          surfaceTintColor:
+              Colors.transparent, // sans ça, Flutter grise légèrement le fond
           elevation: 0,
-          iconTheme: IconThemeData(color: TytoColors.fauve), // le bouton menu, la flèche retour...
+          iconTheme: IconThemeData(
+              color: TytoColors.fauve), // le bouton menu, la flèche retour...
         ),
         drawerTheme: const DrawerThemeData(
           backgroundColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent, // idem : sinon le bleu du tiroir est faussé
+          surfaceTintColor:
+              Colors.transparent, // idem : sinon le bleu du tiroir est faussé
           elevation: 0,
           scrimColor: Color(0x99080B14),
         ),
@@ -180,7 +202,8 @@ class _AuthGateState extends State<_AuthGate> {
       // Volontairement vide : l'écran de lancement d'Android (logo + phrase)
       // est encore affiché à cet instant. Y remettre un logo ferait croire
       // à un second démarrage.
-      return const Scaffold(backgroundColor: Colors.transparent, body: SizedBox.shrink());
+      return const Scaffold(
+          backgroundColor: Colors.transparent, body: SizedBox.shrink());
     }
     return const ChatScreen();
   }

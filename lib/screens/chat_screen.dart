@@ -57,7 +57,14 @@ const _prixPremium = '10,99 €/mois';
 
 /// Les espèces qui ont leur propre page « Peut-il manger ça ? » sur le site ;
 /// les autres arrivent sur la liste générale (guideAlimentsHref de page.js).
-const _especesAvecGuide = ['chien', 'chat', 'lapin', 'oiseau', 'cheval', 'poisson'];
+const _especesAvecGuide = [
+  'chien',
+  'chat',
+  'lapin',
+  'oiseau',
+  'cheval',
+  'poisson'
+];
 
 /// Les 10 questions génériques, pour la conversation « Général ».
 const _suggestionPoolGeneral = [
@@ -98,7 +105,8 @@ const _tracFlecheHaut = '<path d="M12 19V5M6 11l6-6 6 6" />';
 const _tracFlecheBas = '<path d="M12 5v14M6 13l6 6 6-6" />';
 
 /// Un pictogramme au trait, coloré comme le texte qui l'accompagne.
-Widget _picto(String trace, {required double size, required Color color, double epaisseur = 1.6}) {
+Widget _picto(String trace,
+    {required double size, required Color color, double epaisseur = 1.6}) {
   return SvgPicture.string(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#000" '
     'stroke-width="$epaisseur" stroke-linecap="round" stroke-linejoin="round">$trace</svg>',
@@ -108,19 +116,24 @@ Widget _picto(String trace, {required double size, required Color color, double 
   );
 }
 
-class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _ChatScreenState extends State<ChatScreen>
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _pulse;
   StreamSubscription<AuthState>? _authSub;
   bool _peutRedescendre = false;
   bool _peutRemonter = false;
   bool _etaitConnecte = false; // pour repérer le passage « compte → visiteur »
   bool _justPaid = false; // vient de passer en Premium/Pro, à l'instant
-  bool _faitEstSaison = false; // l'encart affiche un conseil de saison plutôt qu'un fait
+  bool _faitEstSaison =
+      false; // l'encart affiche un conseil de saison plutôt qu'un fait
   bool _animauxCharges = false; // comme petsLoaded sur le site
-  bool _erreurEnvoi = false; // « Mes plumes se sont emmêlées » dans la conversation ouverte
-  bool _anniversaireMasque = false; // le bandeau d'anniversaire a été touché (fermé)
+  bool _erreurEnvoi =
+      false; // « Mes plumes se sont emmêlées » dans la conversation ouverte
+  bool _anniversaireMasque =
+      false; // le bandeau d'anniversaire a été touché (fermé)
   String? _cleEnvoi; // la conversation qui attend une réponse de Tyto
-  String? _profilUserId; // le compte dont le statut Premium/Pro est actuellement affiché
+  String?
+      _profilUserId; // le compte dont le statut Premium/Pro est actuellement affiché
   File? _photoJointe;
   PhotoCompressee? _photoCompressee;
   bool _compressionEnCours = false;
@@ -251,10 +264,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     final espece = _especeActive;
     final candidats = <MapEntry<bool, String>>[];
     if (!_faitEstSaison) {
-      final conseil = chatPiocherConseilSaison(DateTime.now().month, espece, null);
+      final conseil =
+          chatPiocherConseilSaison(DateTime.now().month, espece, null);
       if (conseil != null) candidats.add(MapEntry(true, conseil));
     }
-    candidats.add(MapEntry(false, chatPiocherFait(espece, _faitEstSaison ? null : _fait)));
+    candidats.add(MapEntry(
+        false, chatPiocherFait(espece, _faitEstSaison ? null : _fait)));
     final choix = candidats[Random().nextInt(candidats.length)];
     _faitEstSaison = choix.key;
     _fait = choix.value;
@@ -288,8 +303,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   /// La conversation de cette clé a-t-elle un fil affiché (le point « · »
   /// des pastilles du site) ?
-  bool _filNonVide(String cle) =>
-      cle == _cleConversation ? _thread.isNotEmpty : (_filsAffiches[cle]?.isNotEmpty ?? false);
+  bool _filNonVide(String cle) => cle == _cleConversation
+      ? _thread.isNotEmpty
+      : (_filsAffiches[cle]?.isNotEmpty ?? false);
 
   String? get _especeActive {
     if (_activePetId == null) return null;
@@ -310,13 +326,17 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     // qu'on revient du navigateur. Se connecter à un compte déjà abonné change
     // de compte : ce n'est pas un achat, et ne doit pas afficher « Bienvenue ».
     final memeCompte = _profilUserId != null && _profilUserId == userId;
-    final change =
-        profile.premium != _isPremium || profile.pro != _isPro || profile.remaining != _remaining;
+    final change = profile.premium != _isPremium ||
+        profile.pro != _isPro ||
+        profile.remaining != _remaining;
     setState(() {
       _isPremium = profile.premium;
       _isPro = profile.pro;
       _remaining = profile.remaining;
-      if (detecterAchat && memeCompte && !etaitDejaAbonne && (_isPremium || _isPro)) {
+      if (detecterAchat &&
+          memeCompte &&
+          !etaitDejaAbonne &&
+          (_isPremium || _isPro)) {
         _justPaid = true;
       }
     });
@@ -352,7 +372,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         _animauxCharges = true;
         // Comme loadPets sur le site : on garde l'animal ouvert s'il existe
         // encore, sinon on ouvre le premier de la liste.
-        final actifExiste = _activePetId != null && pets.any((p) => p.id == _activePetId);
+        final actifExiste =
+            _activePetId != null && pets.any((p) => p.id == _activePetId);
         if (!actifExiste) {
           final premier = pets.isNotEmpty ? pets.first.id : null;
           if (premier != _activePetId) {
@@ -369,7 +390,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       await NotificationService.reprogrammer(
         rappels: rappels,
         nomsAnimaux: {for (final p in pets) p.id: p.name},
-        animaux: [for (final p in pets) {'nom': p.name, 'espece': p.species}],
+        animaux: [
+          for (final p in pets) {'nom': p.name, 'espece': p.species}
+        ],
       );
       // Les rappels de soins (gouttes, comprimés…) suivent le même chemin.
       try {
@@ -423,7 +446,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         setState(() {
           int candidate = (_chipIdx[slot] + 3) % _suggestionPool.length;
           int guard = 0;
-          while (_chipIdx.contains(candidate) && guard < _suggestionPool.length) {
+          while (
+              _chipIdx.contains(candidate) && guard < _suggestionPool.length) {
             candidate = (candidate + 1) % _suggestionPool.length;
             guard++;
           }
@@ -453,12 +477,14 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   /// Le quota du jour est épuisé (compte gratuit ou visiteur), comme
   /// quotaExhausted sur le site.
-  bool get _quotaEpuise => !_isPremium && !_isPro && _remaining != null && _remaining! <= 0;
+  bool get _quotaEpuise =>
+      !_isPremium && !_isPro && _remaining != null && _remaining! <= 0;
 
   /// Sur iOS, aucune offre payante hors App Store (règle 3.1.1 d'Apple) :
   /// les boutons « Passer Premium » n'y existent que si les achats
   /// intégrés sont en place.
-  bool get _offresAccessibles => !PlatformInfo.estIOS || AchatsService.disponible;
+  bool get _offresAccessibles =>
+      !PlatformInfo.estIOS || AchatsService.disponible;
 
   void _ouvrirOffres() {
     if (PlatformInfo.estIOS) {
@@ -477,12 +503,14 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   /// Ouvre une page du site dans le navigateur.
   Future<void> _ouvrirSite(String chemin) async {
     try {
-      await launchUrl(Uri.parse('https://tytoai.app$chemin'), mode: LaunchMode.externalApplication);
+      await launchUrl(Uri.parse('https://tytoai.app$chemin'),
+          mode: LaunchMode.externalApplication);
     } catch (_) {}
   }
 
   void _ouvrirEcran(Widget ecran) {
-    Navigator.push(context, MaterialPageRoute(builder: (_) => ecran)).then((_) => _chargerAnimaux());
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ecran))
+        .then((_) => _chargerAnimaux());
   }
 
   /// Joindre une photo est réservé au Premium/Pro — comme sur le site,
@@ -496,7 +524,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: TytoColors.nuit2,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -506,16 +535,19 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             // de la fonction, centrés au-dessus des deux choix.
             const OwlSketch(size: 52, eyeColor: TytoColors.fauve),
             const SizedBox(height: 8),
-            Text("L'œil de Tyto", style: TytoText.display(size: 19, color: TytoColors.lune)),
+            Text("L'œil de Tyto",
+                style: TytoText.display(size: 19, color: TytoColors.lune)),
             const SizedBox(height: 14),
             ListTile(
               leading: SiteIcon('IconCamera', size: 22, color: TytoColors.lune),
-              title: Text('Prendre une photo', style: TytoText.ui(color: TytoColors.lune)),
+              title: Text('Prendre une photo',
+                  style: TytoText.ui(color: TytoColors.lune)),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.image_outlined, color: TytoColors.lune),
-              title: Text('Choisir dans la galerie', style: TytoText.ui(color: TytoColors.lune)),
+              title: Text('Choisir dans la galerie',
+                  style: TytoText.ui(color: TytoColors.lune)),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
             const SizedBox(height: 8),
@@ -556,7 +588,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
     if (AuthService.currentSession?.accessToken == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Connexion en cours, réessaie dans un instant.")),
+        const SnackBar(
+            content: Text("Connexion en cours, réessaie dans un instant.")),
       );
       return;
     }
@@ -611,8 +644,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
     // On n'envoie que les 12 derniers messages, comme le site : au-delà,
     // ça coûte cher sans améliorer la réponse.
-    final recents = _thread.length > 12 ? _thread.sublist(_thread.length - 12) : List<_Message>.of(_thread);
-    final messages = recents.map((m) => {'role': m.role, 'content': m.content}).toList();
+    final recents = _thread.length > 12
+        ? _thread.sublist(_thread.length - 12)
+        : List<_Message>.of(_thread);
+    final messages =
+        recents.map((m) => {'role': m.role, 'content': m.content}).toList();
     final result = await ChatService.send(
       accessToken: token,
       messages: messages,
@@ -745,7 +781,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: TytoColors.lune.withOpacity(0.2)),
         ),
-        child: Text(libelle, style: TytoText.ui(size: 12, weight: FontWeight.w400, color: TytoColors.brume)),
+        child: Text(libelle,
+            style: TytoText.ui(
+                size: 12, weight: FontWeight.w400, color: TytoColors.brume)),
       ),
     );
   }
@@ -757,7 +795,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     Widget? icone,
     double ecart = 6,
     double taille = 14.5,
-    EdgeInsets padding = const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
+    EdgeInsets padding =
+        const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
     bool pleineLargeur = false,
     // Avec une icône, le navigateur aligne le libellé sur le bas de l'icône
     // et ajoute quelques pixels sous la ligne (mesurés sur le site).
@@ -780,7 +819,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 child: Text(
                   libelle,
                   textAlign: TextAlign.center,
-                  style: TytoText.ui(size: taille, weight: FontWeight.w700, color: TytoColors.nuit),
+                  style: TytoText.ui(
+                      size: taille,
+                      weight: FontWeight.w700,
+                      color: TytoColors.nuit),
                 ),
               ),
             ],
@@ -799,7 +841,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         border: Border.all(color: TytoColors.encre.withOpacity(0.15)),
         borderRadius: BorderRadius.circular(12),
         boxShadow: const [
-          BoxShadow(color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3)),
+          BoxShadow(
+              color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3)),
         ],
       ),
       child: child,
@@ -809,7 +852,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   /// Les boutons du site sans police précisée s'affichent dans la police
   /// du système (Roboto sur Android) : c'est le cas de l'encart
   /// « Le savais-tu ? » et du bandeau d'anniversaire.
-  TextStyle _policeSysteme({required double size, FontWeight weight = FontWeight.w400, Color color = TytoColors.lune}) {
+  TextStyle _policeSysteme(
+      {required double size,
+      FontWeight weight = FontWeight.w400,
+      Color color = TytoColors.lune}) {
     return TextStyle(
       fontFamily: Theme.of(context).typography.white.bodyMedium?.fontFamily,
       fontSize: size,
@@ -835,7 +881,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             color: TytoColors.nuit2,
             border: Border.all(color: TytoColors.fauve.withOpacity(0.55)),
             boxShadow: const [
-              BoxShadow(color: Color(0x59000000), blurRadius: 12, offset: Offset(0, 3)),
+              BoxShadow(
+                  color: Color(0x59000000),
+                  blurRadius: 12,
+                  offset: Offset(0, 3)),
             ],
           ),
           child: _picto(trace, size: 18, color: TytoColors.fauve),
@@ -860,12 +909,18 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       builder: (ctx) => AlertDialog(
         backgroundColor: TytoColors.nuit2,
         surfaceTintColor: Colors.transparent,
-        title: Text('Effacer cette conversation ?', style: TytoText.display(size: 17, color: TytoColors.lune)),
+        title: Text('Effacer cette conversation ?',
+            style: TytoText.display(size: 17, color: TytoColors.lune)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Annuler', style: TytoText.ui(color: TytoColors.brume))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child:
+                  Text('Annuler', style: TytoText.ui(color: TytoColors.brume))),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Effacer', style: TytoText.ui(color: TytoColors.urgence, weight: FontWeight.w700)),
+            child: Text('Effacer',
+                style: TytoText.ui(
+                    color: TytoColors.urgence, weight: FontWeight.w700)),
           ),
         ],
       ),
@@ -935,7 +990,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             ..addAll(source);
           _erreurEnvoi = false;
         });
-        if (index >= 0 && index < source.length) _allerAuMessage(source[index], index);
+        if (index >= 0 && index < source.length)
+          _allerAuMessage(source[index], index);
       },
       onEffacer: () async {
         final cle = _cleConversation;
@@ -977,7 +1033,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   void _openSos() {
     final pet = _animalActif;
-    EmergencySheet.ouvrir(context, petId: pet?.id, petName: pet?.name, petWeight: pet?.weightKg);
+    EmergencySheet.ouvrir(context,
+        petId: pet?.id, petName: pet?.name, petWeight: pet?.weightKg);
   }
 
   void _onDrawerSelect(String id) {
@@ -1019,7 +1076,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       final due = ev.nextDue;
       if (due == null) continue;
       // Écart en jours calendaires (daysUntil du site), pas en heures.
-      final j = (DateTime(due.year, due.month, due.day).difference(aujourdhui).inHours / 24).round();
+      final j = (DateTime(due.year, due.month, due.day)
+                  .difference(aujourdhui)
+                  .inHours /
+              24)
+          .round();
       if (j < 0 || j > 60) continue;
       proches.add(MapEntry(ev, j));
       if (proches.length == 2) break;
@@ -1053,20 +1114,28 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
         decoration: BoxDecoration(
-          color: proche ? TytoColors.fauve.withOpacity(0.15) : TytoColors.lune.withOpacity(0.05),
+          color: proche
+              ? TytoColors.fauve.withOpacity(0.15)
+              : TytoColors.lune.withOpacity(0.05),
           border: Border.all(
-              color: proche ? TytoColors.fauve.withOpacity(0.53) : TytoColors.lune.withOpacity(0.15)),
+              color: proche
+                  ? TytoColors.fauve.withOpacity(0.53)
+                  : TytoColors.lune.withOpacity(0.15)),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text.rich(
           TextSpan(
-            style: TytoText.ui(size: 13, weight: FontWeight.w400, color: TytoColors.lune).copyWith(height: 1.4),
+            style: TytoText.ui(
+                    size: 13, weight: FontWeight.w400, color: TytoColors.lune)
+                .copyWith(height: 1.4),
             children: [
               TextSpan(
                 text: ev.libelle,
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-              TextSpan(text: ' pour ${nom.isEmpty ? "votre compagnon" : nom} — $quand'),
+              TextSpan(
+                  text:
+                      ' pour ${nom.isEmpty ? "votre compagnon" : nom} — $quand'),
             ],
           ),
         ),
@@ -1092,7 +1161,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               child: _pastille(
                 actif: _activePetId == p.id,
                 general: false,
-                icone: SiteIcon.espece(p.species, size: 14, color: TytoColors.lune),
+                icone: SiteIcon.espece(p.species,
+                    size: 14, color: TytoColors.lune),
                 ecart: 6,
                 // Le point « · » suit le nom de chaque animal dont la
                 // conversation a été ouverte pendant la visite (site).
@@ -1104,7 +1174,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             actif: _activePetId == null,
             general: true,
             icone: SiteIcon('IconGlobe',
-                size: 13, color: _activePetId == null ? TytoColors.lune : TytoColors.brume),
+                size: 13,
+                color:
+                    _activePetId == null ? TytoColors.lune : TytoColors.brume),
             ecart: 5,
             libelle: 'Général$pointGeneral',
             onTap: () => _changerAnimal(null),
@@ -1125,7 +1197,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     final Color fond = actif
         ? TytoColors.fauve.withOpacity(0.15)
         : (general ? Colors.transparent : TytoColors.lune.withOpacity(0.05));
-    final Color couleurTexte = general && !actif ? TytoColors.brume : TytoColors.lune;
+    final Color couleurTexte =
+        general && !actif ? TytoColors.brume : TytoColors.lune;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1135,7 +1208,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         padding: const EdgeInsets.fromLTRB(13, 0, 13, 2.5),
         decoration: BoxDecoration(
           color: fond,
-          border: Border.all(color: actif ? TytoColors.fauve : TytoColors.lune.withOpacity(0.18)),
+          border: Border.all(
+              color:
+                  actif ? TytoColors.fauve : TytoColors.lune.withOpacity(0.18)),
           borderRadius: BorderRadius.circular(999),
         ),
         child: Row(
@@ -1160,7 +1235,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   /// Le lien « Peut-il manger ça ? » vers le guide des aliments de l'espèce.
   Widget _lienAliments(Pet animal) {
-    final chemin = _especesAvecGuide.contains(animal.species) ? '/aliments/${animal.species}' : '/aliments';
+    final chemin = _especesAvecGuide.contains(animal.species)
+        ? '/aliments/${animal.species}'
+        : '/aliments';
     return GestureDetector(
       onTap: () => _ouvrirSite(chemin),
       child: Container(
@@ -1178,7 +1255,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               child: Text(
                 'Peut-il manger ça ? Les aliments pour ${animal.name}',
                 // Ligne de 14 px comme dans le navigateur : pastille de 26 px.
-                style: TytoText.ui(size: 12.5, weight: FontWeight.w400, color: TytoColors.brume)
+                style: TytoText.ui(
+                        size: 12.5,
+                        weight: FontWeight.w400,
+                        color: TytoColors.brume)
                     .copyWith(height: 14 / 12.5),
               ),
             ),
@@ -1239,7 +1319,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     final auj = DateTime.now();
     for (final p in _pets) {
       final n = p.birthdate;
-      if (n != null && n.month == auj.month && n.day == auj.day && n.year < auj.year) return p;
+      if (n != null &&
+          n.month == auj.month &&
+          n.day == auj.day &&
+          n.year < auj.year) return p;
     }
     return null;
   }
@@ -1247,7 +1330,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   /// Les boutons historique / nouvelle conversation n'apparaissent que s'il
   /// y a quelque chose à revoir.
   bool get _boutonsConversation =>
-      _thread.isNotEmpty || (_conversations[_cleConversation]?.isNotEmpty ?? false);
+      _thread.isNotEmpty ||
+      (_conversations[_cleConversation]?.isNotEmpty ?? false);
 
   /// Sur le site, l'en-tête passe sur deux lignes quand tout ne tient pas
   /// (badge Premium + boutons de conversation) : les boutons de droite
@@ -1293,7 +1377,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           const SizedBox(width: 5),
           Text(
             _isPro ? 'PRO' : 'PREMIUM',
-            style: TytoText.ui(size: 11, weight: FontWeight.w700, color: couleur).copyWith(letterSpacing: 0.88),
+            style:
+                TytoText.ui(size: 11, weight: FontWeight.w700, color: couleur)
+                    .copyWith(letterSpacing: 0.88),
           ),
         ],
       ),
@@ -1345,7 +1431,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
             minimumSize: Size.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(999)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1353,7 +1440,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               const SiteIcon('IconAlert', size: 13, color: Colors.white),
               const SizedBox(width: 5),
               Text('URGENCE',
-                  style: TytoText.ui(size: 12, weight: FontWeight.w700, color: Colors.white)
+                  style: TytoText.ui(
+                          size: 12,
+                          weight: FontWeight.w700,
+                          color: Colors.white)
                       .copyWith(letterSpacing: 0.36)),
             ],
           ),
@@ -1374,8 +1464,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           _boutonFantome(TytoIcon.historique(size: 14, color: TytoColors.brume),
               'Historique des conversations', _ouvrirHistorique),
           const SizedBox(width: 6),
-          _boutonFantome(SiteIcon('IconRefresh', size: 14, color: TytoColors.brume),
-              'Nouvelle conversation', _resetConversation),
+          _boutonFantome(
+              SiteIcon('IconRefresh', size: 14, color: TytoColors.brume),
+              'Nouvelle conversation',
+              _resetConversation),
           const SizedBox(width: 6),
         ],
         _boutonUrgence(),
@@ -1394,7 +1486,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       // Même formulation que le site : un visiteur a des questions
       // « d'essai », et on lui dit ce qu'il gagne en créant un compte.
       final nature = visiteur ? "d'essai" : 'gratuite$pluriel';
-      final suite = visiteur ? ' — crée ton compte gratuit pour passer à 15/jour' : '';
+      final suite =
+          visiteur ? ' — crée ton compte gratuit pour passer à 15/jour' : '';
       final couleur = n <= 2 ? TytoColors.fauve : TytoColors.brume;
       compteur = Row(
         children: [
@@ -1403,7 +1496,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           Flexible(
             child: Text(
               '$n question$pluriel $nature restante$pluriel aujourd\'hui$suite',
-              style: TytoText.ui(size: 12, weight: FontWeight.w400, color: couleur),
+              style: TytoText.ui(
+                  size: 12, weight: FontWeight.w400, color: couleur),
             ),
           ),
         ],
@@ -1411,9 +1505,12 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     }
     return Container(
       width: double.infinity,
-      padding: compteur != null ? EdgeInsets.fromLTRB(_marge, 6, _marge, 8) : EdgeInsets.zero,
+      padding: compteur != null
+          ? EdgeInsets.fromLTRB(_marge, 6, _marge, 8)
+          : EdgeInsets.zero,
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: TytoColors.lune.withOpacity(0.1))),
+        border:
+            Border(bottom: BorderSide(color: TytoColors.lune.withOpacity(0.1))),
       ),
       child: compteur,
     );
@@ -1435,7 +1532,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         ),
         child: Text(
           "Bienvenue en Premium. Questions illimitées, réponses avancées et l'œil de Tyto sont à toi.",
-          style: TytoText.ui(size: 14, weight: FontWeight.w400, color: TytoColors.lune).copyWith(height: 1.5),
+          style: TytoText.ui(
+                  size: 14, weight: FontWeight.w400, color: TytoColors.lune)
+              .copyWith(height: 1.5),
         ),
       ),
     );
@@ -1456,7 +1555,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     if (_pets.isNotEmpty) enfants.add(_selecteurAnimal());
     final animal = _animalActif;
     if (_pets.isNotEmpty && animal != null) {
-      enfants.add(Padding(padding: const EdgeInsets.only(top: 2), child: _lienAliments(animal)));
+      enfants.add(Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: _lienAliments(animal)));
     }
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1485,16 +1586,21 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text("L'œil de Tyto", style: TytoText.display(size: 19, color: TytoColors.encre)),
+                Text("L'œil de Tyto",
+                    style: TytoText.display(size: 19, color: TytoColors.encre)),
                 const SizedBox(height: 6),
                 Text.rich(
                   TextSpan(
-                    style: TytoText.body(size: 15.5, color: TytoColors.encre).copyWith(height: 1.55),
+                    style: TytoText.body(size: 15.5, color: TytoColors.encre)
+                        .copyWith(height: 1.55),
                     children: const [
                       TextSpan(
-                          text: "Photographie une plante, un aliment, un insecte ou un bouton suspect : "
+                          text:
+                              "Photographie une plante, un aliment, un insecte ou un bouton suspect : "
                               "Tyto l'analyse pour ton compagnon. C'est une fonction "),
-                      TextSpan(text: 'Premium', style: TextStyle(fontWeight: FontWeight.w700)),
+                      TextSpan(
+                          text: 'Premium',
+                          style: TextStyle(fontWeight: FontWeight.w700)),
                       TextSpan(text: ', avec les questions illimitées.'),
                     ],
                   ),
@@ -1502,7 +1608,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 if (peutPasser) ...[
                   const SizedBox(height: 12),
                   _boutonDore(
-                    PlatformInfo.estIOS ? 'Passer Premium' : 'Passer Premium — $_prixPremium',
+                    PlatformInfo.estIOS
+                        ? 'Passer Premium'
+                        : 'Passer Premium — $_prixPremium',
                     () {
                       Navigator.pop(ctx);
                       if (visiteur) {
@@ -1522,7 +1630,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       padding: const EdgeInsets.only(top: 10),
                       child: Text(
                         'Plus tard',
-                        style: TytoText.ui(size: 12.5, weight: FontWeight.w400, color: TytoColors.encre.withOpacity(0.53))
+                        style: TytoText.ui(
+                                size: 12.5,
+                                weight: FontWeight.w400,
+                                color: TytoColors.encre.withOpacity(0.53))
                             .copyWith(decoration: TextDecoration.underline),
                       ),
                     ),
@@ -1538,9 +1649,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   /// L'encart du quota épuisé, sous l'accueil ou la conversation.
   Widget _carteQuota(bool visiteur) {
-    final corps = TytoText.body(size: 15.5, color: TytoColors.encre).copyWith(height: 1.55);
+    final corps = TytoText.body(size: 15.5, color: TytoColors.encre)
+        .copyWith(height: 1.55);
     const gras = TextStyle(fontWeight: FontWeight.w700);
-    final note = TytoText.ui(size: 11.5, weight: FontWeight.w400, color: TytoColors.encre.withOpacity(0.53));
+    final note = TytoText.ui(
+        size: 11.5,
+        weight: FontWeight.w400,
+        color: TytoColors.encre.withOpacity(0.53));
     final titre = TytoText.display(size: 19, color: TytoColors.encre);
     final List<Widget> enfants;
     if (visiteur) {
@@ -1553,11 +1668,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           TextSpan(text: ' — juste un email — pour passer à '),
           TextSpan(text: '15 questions par jour', style: gras),
           TextSpan(
-              text: ' et débloquer les profils de compagnons, le carnet de santé et les rappels de vaccins.'),
+              text:
+                  ' et débloquer les profils de compagnons, le carnet de santé et les rappels de vaccins.'),
         ])),
         const SizedBox(height: 12),
         _boutonDore('Créer mon compte gratuit', _ouvrirConnexion,
-            icone: SiteIcon('IconMail', size: 15, color: TytoColors.nuit), extraBas: 3),
+            icone: SiteIcon('IconMail', size: 15, color: TytoColors.nuit),
+            extraBas: 3),
         const SizedBox(height: 8),
         Text('Ou reviens demain pour 8 nouvelles questions.', style: note),
       ];
@@ -1573,7 +1690,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           TextSpan(text: ' (analyse de photos).'),
         ])),
         const SizedBox(height: 12),
-        _boutonDore(PlatformInfo.estIOS ? 'Passer Premium' : 'Passer Premium — $_prixPremium', _ouvrirOffres),
+        _boutonDore(
+            PlatformInfo.estIOS
+                ? 'Passer Premium'
+                : 'Passer Premium — $_prixPremium',
+            _ouvrirOffres),
         if (!PlatformInfo.estIOS) ...[
           const SizedBox(height: 8),
           Text('Sans engagement, résiliable en deux clics.', style: note),
@@ -1646,14 +1767,19 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       SiteIcon('IconCamera', size: 13, color: TytoColors.lune),
                       const SizedBox(width: 5),
                       Text('Photo envoyée',
-                          style: TytoText.ui(size: 12.5, weight: FontWeight.w400, color: TytoColors.lune)),
+                          style: TytoText.ui(
+                              size: 12.5,
+                              weight: FontWeight.w400,
+                              color: TytoColors.lune)),
                     ],
                   ),
                 ),
               ),
             Text(
               m.content,
-              style: TytoText.ui(size: 15, weight: FontWeight.w400, color: TytoColors.lune).copyWith(height: 1.45),
+              style: TytoText.ui(
+                      size: 15, weight: FontWeight.w400, color: TytoColors.lune)
+                  .copyWith(height: 1.45),
             ),
           ],
         ),
@@ -1679,7 +1805,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             bottomLeft: Radius.circular(4),
           ),
           boxShadow: const [
-            BoxShadow(color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3)),
+            BoxShadow(
+                color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3)),
           ],
         ),
         child: Column(
@@ -1693,7 +1820,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 const SizedBox(width: 7),
                 Text(
                   'TYTO',
-                  style: TytoText.ui(size: 10, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6))
+                  style: TytoText.ui(
+                          size: 10,
+                          weight: FontWeight.w700,
+                          color: TytoColors.encre.withOpacity(0.6))
                       .copyWith(letterSpacing: 2.2),
                 ),
               ],
@@ -1722,17 +1852,20 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             bottomLeft: Radius.circular(4),
           ),
           boxShadow: const [
-            BoxShadow(color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3)),
+            BoxShadow(
+                color: Color(0x47000000), blurRadius: 14, offset: Offset(0, 3)),
           ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const OwlSketch(size: 19, ink: TytoColors.encre, detail: false, thinking: true),
+            const OwlSketch(
+                size: 19, ink: TytoColors.encre, detail: false, thinking: true),
             const SizedBox(width: 9),
             Text(
               'Tyto observe',
-              style: TytoText.body(size: 15, color: TytoColors.encre).copyWith(fontStyle: FontStyle.italic),
+              style: TytoText.body(size: 15, color: TytoColors.encre)
+                  .copyWith(fontStyle: FontStyle.italic),
             ),
             _PointsAnimes(controller: _pulse),
           ],
@@ -1749,7 +1882,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: largeurUtile * 0.94),
         child: CustomPaint(
-          foregroundPainter: _BordPointille(couleur: TytoColors.fauve.withOpacity(0.53), rayon: 12),
+          foregroundPainter: _BordPointille(
+              couleur: TytoColors.fauve.withOpacity(0.53), rayon: 12),
           child: Container(
             // 12 / 16 de marge intérieure, plus le trait de 1 px.
             padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 13),
@@ -1763,14 +1897,19 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               children: [
                 Text(
                   "Mes plumes se sont emmêlées en chemin — la réponse n'est pas arrivée.",
-                  style: TytoText.ui(size: 14, weight: FontWeight.w400, color: TytoColors.lune).copyWith(height: 1.5),
+                  style: TytoText.ui(
+                          size: 14,
+                          weight: FontWeight.w400,
+                          color: TytoColors.lune)
+                      .copyWith(height: 1.5),
                 ),
                 const SizedBox(height: 9),
                 _boutonDore(
                   'Réessayer',
                   _relancer,
                   taille: 13,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                 ),
               ],
             ),
@@ -1793,7 +1932,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         KeyedSubtree(
           key: GlobalObjectKey(m),
           child: ChatApparition(
-            child: m.role == 'user' ? _bulleUtilisateur(m, largeurUtile) : _carteTyto(m, largeurUtile),
+            child: m.role == 'user'
+                ? _bulleUtilisateur(m, largeurUtile)
+                : _carteTyto(m, largeurUtile),
           ),
         ),
       if (enAttente)
@@ -1837,7 +1978,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
           decoration: BoxDecoration(
-            color: Color.alphaBlend(TytoColors.fauve.withOpacity(0.078), TytoColors.nuit2),
+            color: Color.alphaBlend(
+                TytoColors.fauve.withOpacity(0.078), TytoColors.nuit2),
             border: Border.all(color: TytoColors.fauve.withOpacity(0.4)),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -1846,7 +1988,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             children: [
               Padding(
                 padding: const EdgeInsets.only(top: 2),
-                child: SiteIcon('IconSparkle', size: 14, color: TytoColors.fauve),
+                child:
+                    SiteIcon('IconSparkle', size: 14, color: TytoColors.fauve),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -1856,10 +1999,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                     children: [
                       TextSpan(
                         text: 'Joyeux anniversaire ${anniv.name} !',
-                        style: const TextStyle(fontWeight: FontWeight.w700, color: TytoColors.fauve),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: TytoColors.fauve),
                       ),
                       TextSpan(
-                          text: " $age an${age > 1 ? 's' : ''} aujourd'hui — Tyto lui souhaite une belle journée."),
+                          text:
+                              " $age an${age > 1 ? 's' : ''} aujourd'hui — Tyto lui souhaite une belle journée."),
                     ],
                   ),
                 ),
@@ -1885,7 +2031,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           children: [
             Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: SiteIcon(_faitEstSaison ? 'IconAlert' : 'IconBulb', size: 14, color: TytoColors.fauve),
+              child: SiteIcon(_faitEstSaison ? 'IconAlert' : 'IconBulb',
+                  size: 14, color: TytoColors.fauve),
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -1895,9 +2042,13 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       .copyWith(fontStyle: FontStyle.italic, height: 1.45),
                   children: [
                     TextSpan(
-                      text: _faitEstSaison ? 'Conseil de saison : ' : 'Le savais-tu ? ',
+                      text: _faitEstSaison
+                          ? 'Conseil de saison : '
+                          : 'Le savais-tu ? ',
                       style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontStyle: FontStyle.normal, color: TytoColors.lune),
+                          fontWeight: FontWeight.w700,
+                          fontStyle: FontStyle.normal,
+                          color: TytoColors.lune),
                     ),
                     TextSpan(text: _fait),
                   ],
@@ -1931,7 +2082,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           const SizedBox(width: 10),
           Expanded(
             child: Text('Photo prête à envoyer',
-                style: TytoText.ui(size: 12.5, weight: FontWeight.w400, color: TytoColors.brume)),
+                style: TytoText.ui(
+                    size: 12.5,
+                    weight: FontWeight.w400,
+                    color: TytoColors.brume)),
           ),
           const SizedBox(width: 10),
           _boutonFantomeTexte('Retirer la photo', _retirerPhoto),
@@ -1955,7 +2109,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 padding: padding,
                 extraBas: 2)
             : _boutonDore('Passer Premium', _ouvrirOffres,
-                icone: SiteIcon('IconSparkle', size: 12, color: TytoColors.nuit),
+                icone:
+                    SiteIcon('IconSparkle', size: 12, color: TytoColors.nuit),
                 ecart: 5,
                 taille: 12,
                 padding: padding,
@@ -1969,7 +2124,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   /// Le texte du champ de saisie du site : Karla 15,5 px, interligne 1,4.
   TextStyle _styleSaisie(Color couleur) =>
-      TytoText.ui(size: 15.5, weight: FontWeight.w400, color: couleur).copyWith(height: 1.4);
+      TytoText.ui(size: 15.5, weight: FontWeight.w400, color: couleur)
+          .copyWith(height: 1.4);
 
   /// Le champ vide quand le quota est épuisé, tel que le site l'affiche :
   /// son textarea ne fait qu'une ligne (21,7 px + 8 px de marge en haut et
@@ -2017,7 +2173,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       child: SizedBox(
                         height: 16,
                         width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.fauve),
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: TytoColors.fauve),
                       ),
                     ),
                   )
@@ -2048,7 +2205,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                           hintStyle: _styleSaisie(_gristInvite),
                           isDense: true,
                           filled: false,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 8),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -2079,7 +2237,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               valueListenable: _controller,
               builder: (context, valeur, _) {
                 final peutEnvoyer =
-                    (valeur.text.trim().isNotEmpty || _photoJointe != null) && !_sending && !quota;
+                    (valeur.text.trim().isNotEmpty || _photoJointe != null) &&
+                        !_sending &&
+                        !quota;
                 return Semantics(
                   button: true,
                   label: 'Envoyer',
@@ -2091,9 +2251,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                       child: Container(
                         width: 40,
                         height: 40,
-                        decoration: const BoxDecoration(shape: BoxShape.circle, color: TytoColors.fauve),
+                        decoration: const BoxDecoration(
+                            shape: BoxShape.circle, color: TytoColors.fauve),
                         alignment: Alignment.center,
-                        child: TytoIcon.envoyer(size: 18, color: TytoColors.nuit),
+                        child:
+                            TytoIcon.envoyer(size: 18, color: TytoColors.nuit),
                       ),
                     ),
                   ),
@@ -2108,13 +2270,16 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
 
   /// La ligne de liens sous la saisie, comme le pied de page du site.
   Widget _liensDuPied(bool visiteur) {
-    final style = TytoText.ui(size: 10.5, weight: FontWeight.w400, color: TytoColors.brume);
+    final style = TytoText.ui(
+        size: 10.5, weight: FontWeight.w400, color: TytoColors.brume);
     Widget lien(String texte, VoidCallback onTap) {
       return GestureDetector(
         onTap: onTap,
         child: Text(
           texte,
-          style: style.copyWith(decoration: TextDecoration.underline, decorationColor: TytoColors.brume),
+          style: style.copyWith(
+              decoration: TextDecoration.underline,
+              decorationColor: TytoColors.brume),
         ),
       );
     }
@@ -2128,7 +2293,9 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
       lien('Mentions légales', () => _ouvrirSite('/mentions-legales')),
       lien('CGU/CGV', () => _ouvrirSite('/cgu-cgv')),
       lien('Confidentialité', () => _ouvrirSite('/confidentialite')),
-      if (!visiteur) lien('Supprimer mon compte', () => DeleteAccountDialog.afficher(context)),
+      if (!visiteur)
+        lien('Supprimer mon compte',
+            () => DeleteAccountDialog.afficher(context)),
     ];
     return Wrap(
       alignment: WrapAlignment.center,
@@ -2152,7 +2319,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   Widget _piedDePage(bool clavierOuvert, bool visiteur) {
     return Container(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: TytoColors.lune.withOpacity(0.1))),
+        border:
+            Border(top: BorderSide(color: TytoColors.lune.withOpacity(0.1))),
       ),
       child: SafeArea(
         top: false,
@@ -2166,14 +2334,19 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               // Pendant la saisie, l'encart s'efface pour laisser de la
               // place à la conversation.
               if (!clavierOuvert) _encart(),
-              if (_quotaEpuise && (visiteur || _offresAccessibles)) _boutonQuotaPied(visiteur),
+              if (_quotaEpuise && (visiteur || _offresAccessibles))
+                _boutonQuotaPied(visiteur),
               _barreDeSaisie(),
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 7, 4, 0),
                 child: Text(
                   'Tyto peut se tromper et ne remplace pas un vétérinaire.',
                   textAlign: TextAlign.center,
-                  style: TytoText.ui(size: 11, weight: FontWeight.w400, color: TytoColors.brume).copyWith(height: 1.4),
+                  style: TytoText.ui(
+                          size: 11,
+                          weight: FontWeight.w400,
+                          color: TytoColors.brume)
+                      .copyWith(height: 1.4),
                 ),
               ),
               if (!clavierOuvert)
@@ -2206,22 +2379,21 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
   Widget build(BuildContext context) {
     final visiteur = !AuthService.isSignedIn;
     final marge = _marge;
-    final deuxLignes = _enTeteSurDeuxLignes(min(MediaQuery.of(context).size.width, 720.0));
-    // Les empreintes couvrent tout l'écran, derrière l'en-tête comme sur le
-    // site (couche « position: fixed » sous l'en-tête transparent).
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        const Positioned.fill(child: SafeArea(child: PawTrails())),
-        _echafaudage(visiteur, marge, deuxLignes),
-      ],
-    );
+    final deuxLignes =
+        _enTeteSurDeuxLignes(min(MediaQuery.of(context).size.width, 720.0));
+    // Les empreintes ne vivent que dans la zone centrale (entre le filet
+    // sous l'en-tête et le « Le savais-tu ? »), voir plus bas dans le corps.
+    return _echafaudage(visiteur, marge, deuxLignes);
   }
 
   Widget _echafaudage(bool visiteur, double marge, bool deuxLignes) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      drawer: TytoDrawer(activeId: 'chat', onSelect: _onDrawerSelect, isPro: _isPro, isPremium: _isPremium),
+      drawer: TytoDrawer(
+          activeId: 'chat',
+          onSelect: _onDrawerSelect,
+          isPro: _isPro,
+          isPremium: _isPremium),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -2247,7 +2419,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                     decoration: BoxDecoration(
                       color: TytoColors.lune.withOpacity(0.04),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: TytoColors.lune.withOpacity(0.1)),
+                      border:
+                          Border.all(color: TytoColors.lune.withOpacity(0.1)),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -2313,30 +2486,40 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           children: [
             _basEnTete(visiteur),
             Expanded(
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: _thread.isEmpty ? _buildEmptyState(visiteur) : _buildFil(visiteur),
-                  ),
-                  // Remonter tout en haut d'une longue conversation, ou
-                  // revenir au dernier message, d'un geste (à droite de la
-                  // colonne, comme la flèche du site).
-                  if (_thread.isNotEmpty && (_peutRedescendre || _peutRemonter))
-                    Positioned(
-                      right: marge,
-                      bottom: 12,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (_peutRemonter)
-                            _boutonDefilement(_tracFlecheHaut, _scrollToTop, 'Remonter en haut'),
-                          if (_peutRemonter && _peutRedescendre) const SizedBox(height: 10),
-                          if (_peutRedescendre)
-                            _boutonDefilement(_tracFlecheBas, _scrollToBottom, 'Revenir en bas'),
-                        ],
-                      ),
+              // ClipRect : une empreinte qui déborde est coupée net au filet.
+              child: ClipRect(
+                child: Stack(
+                  children: [
+                    const Positioned.fill(child: PawTrails()),
+                    Positioned.fill(
+                      child: _thread.isEmpty
+                          ? _buildEmptyState(visiteur)
+                          : _buildFil(visiteur),
                     ),
-                ],
+                    // Remonter tout en haut d'une longue conversation, ou
+                    // revenir au dernier message, d'un geste (à droite de la
+                    // colonne, comme la flèche du site).
+                    if (_thread.isNotEmpty &&
+                        (_peutRedescendre || _peutRemonter))
+                      Positioned(
+                        right: marge,
+                        bottom: 12,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_peutRemonter)
+                              _boutonDefilement(_tracFlecheHaut, _scrollToTop,
+                                  'Remonter en haut'),
+                            if (_peutRemonter && _peutRedescendre)
+                              const SizedBox(height: 10),
+                            if (_peutRedescendre)
+                              _boutonDefilement(_tracFlecheBas, _scrollToBottom,
+                                  'Revenir en bas'),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
             _piedDePage(clavierOuvert, visiteur),
@@ -2354,7 +2537,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     // 100dvh = la hauteur visible de la page, sans la barre d'état ni la
     // barre système du bas (qui ne font pas partie de la fenêtre du site).
     final media = MediaQuery.of(context);
-    final double hauteurMin = media.size.height - media.padding.top - media.padding.bottom - 380;
+    final double hauteurMin =
+        media.size.height - media.padding.top - media.padding.bottom - 380;
     return SingleChildScrollView(
       controller: _scrollAccueil,
       padding: EdgeInsets.fromLTRB(_marge, 8, _marge, 24),
@@ -2364,7 +2548,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         children: [
           _hautDuFil(),
           ConstrainedBox(
-            constraints: BoxConstraints(minHeight: hauteurMin > 0 ? hauteurMin : 0.0),
+            constraints:
+                BoxConstraints(minHeight: hauteurMin > 0 ? hauteurMin : 0.0),
             child: Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Center(child: _accueil()),
@@ -2391,7 +2576,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                 ? 'Que veux-tu savoir pour ${animal.name} ?'
                 : "Que veux-tu savoir sur les animaux aujourd'hui ?",
             textAlign: TextAlign.center,
-            style: TytoText.body(size: 17, color: TytoColors.brume).copyWith(fontStyle: FontStyle.italic, height: 1.5),
+            style: TytoText.body(size: 17, color: TytoColors.brume)
+                .copyWith(fontStyle: FontStyle.italic, height: 1.5),
           ),
         ),
         if (sansAnimal) ...[
@@ -2399,7 +2585,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
           Text(
             'Gratuit, sans inscription. Touche une question pour commencer.',
             textAlign: TextAlign.center,
-            style: TytoText.ui(size: 12.5, weight: FontWeight.w400, color: TytoColors.brume),
+            style: TytoText.ui(
+                size: 12.5, weight: FontWeight.w400, color: TytoColors.brume),
           ),
         ],
         const SizedBox(height: 18),
@@ -2425,7 +2612,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             child: GestureDetector(
               // Comme le site (setEditingPet({})) : on arrive directement
               // sur le formulaire « Nouveau compagnon ».
-              onTap: () => _ouvrirEcran(const PetsScreen(nouveauCompagnon: true)),
+              onTap: () =>
+                  _ouvrirEcran(const PetsScreen(nouveauCompagnon: true)),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -2435,7 +2623,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
                     child: Text(
                       'Ou enregistre ton compagnon pour des réponses personnalisées',
                       textAlign: TextAlign.center,
-                      style: TytoText.ui(size: 12.5, weight: FontWeight.w400, color: TytoColors.brume).copyWith(
+                      style: TytoText.ui(
+                              size: 12.5,
+                              weight: FontWeight.w400,
+                              color: TytoColors.brume)
+                          .copyWith(
                         decoration: TextDecoration.underline,
                         decorationStyle: TextDecorationStyle.dotted,
                         decorationColor: TytoColors.brume,
@@ -2457,7 +2649,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
     return AnimatedContainer(
       duration: _fadeDuration,
       curve: _courbePuces,
-      transform: Matrix4.translationValues(0.0, _chipVisible[slot] ? 0.0 : 7.0, 0.0),
+      transform:
+          Matrix4.translationValues(0.0, _chipVisible[slot] ? 0.0 : 7.0, 0.0),
       child: AnimatedOpacity(
         opacity: _chipVisible[slot] ? 1 : 0,
         duration: _fadeDuration,
@@ -2465,7 +2658,10 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
         child: OutlinedButton(
           onPressed: () => _sendMessage(_suggestionPool[pIdx]),
           style: OutlinedButton.styleFrom(
-            backgroundColor: TytoColors.lune.withOpacity(0.07),
+            // Opaque : les empreintes passent derrière la puce, on ne les
+            // voit pas à travers (même teinte que l'ancienne, mais pleine).
+            backgroundColor: Color.alphaBlend(
+                TytoColors.lune.withOpacity(0.07), TytoColors.nuit),
             side: BorderSide(color: TytoColors.lune.withOpacity(0.23)),
             // 13 / 17 de marge comme le site, plus le trait de 1 px
             // (ici dessiné par-dessus la marge).
@@ -2474,7 +2670,8 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
             // (47,6 px sur une ligne, comme sur le site).
             minimumSize: Size.zero,
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             alignment: Alignment.centerLeft,
           ),
           child: Row(
@@ -2485,7 +2682,11 @@ class _ChatScreenState extends State<ChatScreen> with SingleTickerProviderStateM
               Expanded(
                 child: Text(
                   _suggestionPool[pIdx],
-                  style: TytoText.ui(size: 14.5, weight: FontWeight.w400, color: TytoColors.lune).copyWith(height: 1.35),
+                  style: TytoText.ui(
+                          size: 14.5,
+                          weight: FontWeight.w400,
+                          color: TytoColors.lune)
+                      .copyWith(height: 1.35),
                   textAlign: TextAlign.left,
                 ),
               ),
@@ -2507,7 +2708,8 @@ class _BordPointille extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = (Offset.zero & size).deflate(0.5);
-    final chemin = Path()..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(rayon - 0.5)));
+    final chemin = Path()
+      ..addRRect(RRect.fromRectAndRadius(rect, Radius.circular(rayon - 0.5)));
     final pinceau = Paint()
       ..color = couleur
       ..style = PaintingStyle.stroke
@@ -2515,14 +2717,16 @@ class _BordPointille extends CustomPainter {
     for (final mesure in chemin.computeMetrics()) {
       double d = 0;
       while (d < mesure.length) {
-        canvas.drawPath(mesure.extractPath(d, min(d + 3, mesure.length)), pinceau);
+        canvas.drawPath(
+            mesure.extractPath(d, min(d + 3, mesure.length)), pinceau);
         d += 5;
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _BordPointille old) => old.couleur != couleur || old.rayon != rayon;
+  bool shouldRepaint(covariant _BordPointille old) =>
+      old.couleur != couleur || old.rayon != rayon;
 }
 
 /// Les trois points de « Tyto observe… » : chacun s'allume à son tour,
@@ -2585,11 +2789,15 @@ class _TexteRiche extends StatelessWidget {
     final spans = <TextSpan>[];
     var dernier = 0;
     for (final m in _gras.allMatches(ligne)) {
-      if (m.start > dernier) spans.add(TextSpan(text: ligne.substring(dernier, m.start)));
-      spans.add(TextSpan(text: m.group(1), style: const TextStyle(fontWeight: FontWeight.w700)));
+      if (m.start > dernier)
+        spans.add(TextSpan(text: ligne.substring(dernier, m.start)));
+      spans.add(TextSpan(
+          text: m.group(1),
+          style: const TextStyle(fontWeight: FontWeight.w700)));
       dernier = m.end;
     }
-    if (dernier < ligne.length) spans.add(TextSpan(text: ligne.substring(dernier)));
+    if (dernier < ligne.length)
+      spans.add(TextSpan(text: ligne.substring(dernier)));
     return spans;
   }
 
@@ -2612,7 +2820,8 @@ class _TexteRiche extends StatelessWidget {
     }
     if (liste.isNotEmpty) blocs.add(liste);
 
-    final style = TytoText.body(size: _taille, color: TytoColors.encre).copyWith(
+    final style =
+        TytoText.body(size: _taille, color: TytoColors.encre).copyWith(
       height: _hauteurLigne,
       leadingDistribution: TextLeadingDistribution.even,
     );
@@ -2662,7 +2871,8 @@ class _TexteRiche extends StatelessWidget {
                         ),
                       ),
                       Flexible(
-                        child: Text.rich(TextSpan(style: style, children: _morceaux(bloc[j]))),
+                        child: Text.rich(TextSpan(
+                            style: style, children: _morceaux(bloc[j]))),
                       ),
                     ],
                   ),
@@ -2686,6 +2896,11 @@ class _Message {
   final bool hasImage;
   final File? image; // la photo envoyée pendant cette visite, pour l'afficher
   final DateTime date;
-  _Message({required this.role, required this.content, this.hasImage = false, this.image, DateTime? date})
+  _Message(
+      {required this.role,
+      required this.content,
+      this.hasImage = false,
+      this.image,
+      DateTime? date})
       : date = date ?? DateTime.now();
 }

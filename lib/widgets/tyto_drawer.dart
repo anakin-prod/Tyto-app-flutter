@@ -30,14 +30,26 @@ class DrawerItem {
 const tytoDrawerItems = [
   DrawerItem(id: 'chat', label: 'Chat', sub: 'Poser une question'),
   DrawerItem(id: 'pets', label: 'Mes animaux', sub: 'Profils & compagnons'),
-  DrawerItem(id: 'carnet', label: 'Carnet de santé', sub: 'Vaccins, poids, soins'),
+  DrawerItem(
+      id: 'carnet', label: 'Carnet de santé', sub: 'Vaccins, poids, soins'),
   DrawerItem(id: 'soins', label: 'Soins en cours', sub: 'Traitements & suivi'),
-  DrawerItem(id: 'tableau', label: 'Tableau des rappels', sub: 'Ce qui arrive bientôt'),
-  DrawerItem(id: 'veille', label: 'Veille sanitaire', sub: "L'analyse quotidienne"),
+  DrawerItem(
+      id: 'tableau',
+      label: 'Tableau des rappels',
+      sub: 'Ce qui arrive bientôt'),
+  DrawerItem(
+      id: 'veille', label: 'Veille sanitaire', sub: "L'analyse quotidienne"),
 ];
 
 /// La teinte dorée de la chouette du tiroir (#D9BE8C sur le site).
 const _dore = Color(0xFFD9BE8C);
+
+/// Le cadre doré double. Les téléphones récents ont des coins d'écran très
+/// arrondis (autour de 40 à 55 px) : un cadre à angle vif y serait rogné.
+/// Le cadre est donc rentré de 11 px et arrondi comme l'écran, ce qui le
+/// laisse entièrement visible, sans ornement dans les coins.
+const double _margeCadre = 11;
+const double _rayonCadre = 38;
 
 /// Le bas du dégradé du tiroir (#0A0E18 sur le site).
 const _nuitProfonde = Color(0xFF0A0E18);
@@ -76,18 +88,22 @@ const _traceEquipe = '<circle cx="9.2" cy="8.4" r="3.2" />'
     '<path d="M16.2 6.1a3.2 3.2 0 0 1 0 6" />'
     '<path d="M17.4 14.6a5.6 5.6 0 0 1 3.4 5.2" />';
 
-const _traceBouclier = '<path d="M12 2.8 4.8 5.9v5.3c0 4.4 3 8.5 7.2 9.9 4.2-1.4 7.2-5.5 7.2-9.9V5.9L12 2.8Z" />'
+const _traceBouclier =
+    '<path d="M12 2.8 4.8 5.9v5.3c0 4.4 3 8.5 7.2 9.9 4.2-1.4 7.2-5.5 7.2-9.9V5.9L12 2.8Z" />'
     '<path d="M8.9 11.9l2.1 2.2 4.1-4.4" />';
 
-const _traceEnveloppe = '<rect x="2.8" y="5" width="18.4" height="14" rx="2.2" />'
+const _traceEnveloppe =
+    '<rect x="2.8" y="5" width="18.4" height="14" rx="2.2" />'
     '<path d="M3.4 6.6 12 12.9l8.6-6.3" />';
 
-const _traceDeconnexion = '<path d="M9.6 20.2H5.4a1.8 1.8 0 0 1-1.8-1.8V5.6a1.8 1.8 0 0 1 1.8-1.8h4.2" />'
+const _traceDeconnexion =
+    '<path d="M9.6 20.2H5.4a1.8 1.8 0 0 1-1.8-1.8V5.6a1.8 1.8 0 0 1 1.8-1.8h4.2" />'
     '<path d="M15.8 16.4 20.2 12l-4.4-4.4" />'
     '<path d="M20.2 12H9.4" />';
 
 /// Le livre ouvert de « Blog et guides » (tracé en ligne dans page.js, trait 1,7).
-const _traceBlog = '<path d="M4.5 4.5h10a2 2 0 0 1 2 2v13h-10a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2z" />'
+const _traceBlog =
+    '<path d="M4.5 4.5h10a2 2 0 0 1 2 2v13h-10a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2z" />'
     '<path d="M16.5 8.5h3v9a2 2 0 0 1-2 2M7 9h6M7 12.5h6" />';
 
 const _traceCorbeille = '<path d="M4 6.4h16" />'
@@ -96,11 +112,13 @@ const _traceCorbeille = '<path d="M4 6.4h16" />'
 
 /// La cloche des conseils de saison (propre à l'application), dessinée
 /// dans le même style que les icônes du site.
-const _traceCloche = '<path d="M6.4 16.4V11a5.6 5.6 0 0 1 11.2 0v5.4l1.6 1.8H4.8l1.6-1.8Z" />'
+const _traceCloche =
+    '<path d="M6.4 16.4V11a5.6 5.6 0 0 1 11.2 0v5.4l1.6 1.8H4.8l1.6-1.8Z" />'
     '<path d="M10 20.8a2.2 2.2 0 0 0 4 0" />';
 const _traceClocheBarree = '$_traceCloche<path d="M4.2 4.2 19.8 19.8" />';
 
-Widget _traceSvg(String trace, {required double size, required Color color, double epaisseur = 1.6}) {
+Widget _traceSvg(String trace,
+    {required double size, required Color color, double epaisseur = 1.6}) {
   return SvgPicture.string(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" '
     'stroke="currentColor" stroke-width="$epaisseur" stroke-linecap="round" '
@@ -148,7 +166,8 @@ class TytoDrawer extends StatefulWidget {
   State<TytoDrawer> createState() => _TytoDrawerState();
 }
 
-class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateMixin {
+class _TytoDrawerState extends State<TytoDrawer>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _entree;
   bool _saisonActive = true; // les notifications « Conseils de saison »
 
@@ -183,15 +202,20 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
 
   /// Fondu avec un glissement de 14 px vers la droite, démarré après
   /// [delaiMs] (animation drawerReveal du site).
-  Widget _apparition({required int delaiMs, required bool sansAnimation, required Widget enfant}) {
+  Widget _apparition(
+      {required int delaiMs,
+      required bool sansAnimation,
+      required Widget enfant}) {
     if (sansAnimation) return enfant;
     final debut = delaiMs / _dureeSequenceMs;
-    final fin = math.min(1.0, (delaiMs + _dureeApparitionMs) / _dureeSequenceMs);
+    final fin =
+        math.min(1.0, (delaiMs + _dureeApparitionMs) / _dureeSequenceMs);
     final intervalle = Interval(debut, fin, curve: _courbeApparition);
     return AnimatedBuilder(
       animation: _entree,
       builder: (context, child) {
-        final v = math.max(0.0, math.min(1.0, intervalle.transform(_entree.value)));
+        final v =
+            math.max(0.0, math.min(1.0, intervalle.transform(_entree.value)));
         return Opacity(
           opacity: v,
           child: Transform.translate(
@@ -260,7 +284,10 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
               // box-shadow: 8px 0 50px rgba(0,0,0,.5) — rayon converti pour
               // retrouver le même flou que le navigateur.
               boxShadow: const [
-                BoxShadow(color: Color(0x80000000), offset: Offset(8, 0), blurRadius: 42.4),
+                BoxShadow(
+                    color: Color(0x80000000),
+                    offset: Offset(8, 0),
+                    blurRadius: 42.4),
               ],
             ),
             child: Stack(
@@ -269,11 +296,12 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Padding(
-                      padding: const EdgeInsets.all(9),
+                      padding: const EdgeInsets.all(_margeCadre),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(13),
-                          border: Border.all(color: TytoColors.fauve.withAlpha(0x45)),
+                          borderRadius: BorderRadius.circular(_rayonCadre),
+                          border: Border.all(
+                              color: TytoColors.fauve.withAlpha(0x45)),
                         ),
                       ),
                     ),
@@ -282,11 +310,13 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                 Positioned.fill(
                   child: IgnorePointer(
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(_margeCadre + 3),
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(11),
-                          border: Border.all(color: TytoColors.fauve.withAlpha(0x25), width: 0.5),
+                          borderRadius: BorderRadius.circular(_rayonCadre - 3),
+                          border: Border.all(
+                              color: TytoColors.fauve.withAlpha(0x25),
+                              width: 0.5),
                         ),
                       ),
                     ),
@@ -316,23 +346,6 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                     ],
                   ),
                 ),
-                // Les quatre coins ornementés, au-dessus du reste.
-                const Positioned(top: 9, left: 9, child: _CoinOrnement()),
-                const Positioned(
-                  top: 9,
-                  right: 9,
-                  child: RotatedBox(quarterTurns: 1, child: _CoinOrnement()),
-                ),
-                const Positioned(
-                  bottom: 9,
-                  right: 9,
-                  child: RotatedBox(quarterTurns: 2, child: _CoinOrnement()),
-                ),
-                const Positioned(
-                  bottom: 9,
-                  left: 9,
-                  child: RotatedBox(quarterTurns: 3, child: _CoinOrnement()),
-                ),
               ],
             ),
           ),
@@ -348,7 +361,8 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 16, 22, 14),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: TytoColors.lune.withAlpha(0x12))),
+        border:
+            Border(bottom: BorderSide(color: TytoColors.lune.withAlpha(0x12))),
       ),
       child: Row(
         children: [
@@ -361,7 +375,10 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
               children: [
                 Text(
                   'Tyto',
-                  style: TytoText.display(size: 22, weight: FontWeight.w700, color: TytoColors.lune)
+                  style: TytoText.display(
+                          size: 22,
+                          weight: FontWeight.w700,
+                          color: TytoColors.lune)
                       .copyWith(height: 1.1, leadingDistribution: interligne),
                 ),
                 const SizedBox(height: 3),
@@ -369,8 +386,14 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                 const SizedBox(height: 3),
                 Text(
                   "L'IA du monde animal",
-                  style: TytoText.ui(size: 10.5, weight: FontWeight.w400, color: TytoColors.brume)
-                      .copyWith(fontStyle: FontStyle.italic, height: 1.1, leadingDistribution: interligne),
+                  style: TytoText.ui(
+                          size: 10.5,
+                          weight: FontWeight.w400,
+                          color: TytoColors.brume)
+                      .copyWith(
+                          fontStyle: FontStyle.italic,
+                          height: 1.1,
+                          leadingDistribution: interligne),
                 ),
               ],
             ),
@@ -394,8 +417,12 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                     padding: const EdgeInsets.symmetric(horizontal: 2),
                     child: Text(
                       '×',
-                      style: TytoText.ui(size: 26, weight: FontWeight.w400, color: TytoColors.brume)
-                          .copyWith(height: 1.0, leadingDistribution: interligne),
+                      style: TytoText.ui(
+                              size: 26,
+                              weight: FontWeight.w400,
+                              color: TytoColors.brume)
+                          .copyWith(
+                              height: 1.0, leadingDistribution: interligne),
                     ),
                   ),
                 ),
@@ -431,7 +458,8 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
 
   Widget _rubrique(DrawerItem item) {
     final on = item.id == activeId;
-    final lit = on || item.id == _rubriqueAllumee; // allumée : active ou sous le doigt
+    final lit =
+        on || item.id == _rubriqueAllumee; // allumée : active ou sous le doigt
     const duree = Duration(milliseconds: 200);
     final couleurIcone = lit ? TytoColors.fauve : TytoColors.brume;
     return GestureDetector(
@@ -455,12 +483,23 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                 gradient: lit
                     ? RadialGradient(
                         radius: 0.7071, // jusqu'aux coins, comme le cercle CSS
-                        colors: [TytoColors.fauve.withAlpha(0x38), TytoColors.fauve.withAlpha(0x0a)],
+                        colors: [
+                          TytoColors.fauve.withAlpha(0x38),
+                          TytoColors.fauve.withAlpha(0x0a)
+                        ],
                       )
                     : null,
-                border: Border.all(color: lit ? TytoColors.fauve : TytoColors.lune.withAlpha(0x1f)),
+                border: Border.all(
+                    color: lit
+                        ? TytoColors.fauve
+                        : TytoColors.lune.withAlpha(0x1f)),
                 boxShadow: lit
-                    ? [BoxShadow(color: TytoColors.fauve.withAlpha(0x40), blurRadius: 9.5, spreadRadius: 1)]
+                    ? [
+                        BoxShadow(
+                            color: TytoColors.fauve.withAlpha(0x40),
+                            blurRadius: 9.5,
+                            spreadRadius: 1)
+                      ]
                     : null,
               ),
               child: TweenAnimationBuilder<Color?>(
@@ -483,14 +522,19 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                     style: TytoText.display(
                       size: 15,
                       weight: on ? FontWeight.w700 : FontWeight.w600,
-                      color: lit ? TytoColors.lune : TytoColors.lune.withAlpha(0xcc),
+                      color: lit
+                          ? TytoColors.lune
+                          : TytoColors.lune.withAlpha(0xcc),
                     ),
                     child: Text(item.label),
                   ),
                   const SizedBox(height: 1),
                   Text(
                     item.sub,
-                    style: TytoText.ui(size: 11.5, weight: FontWeight.w400, color: TytoColors.brume),
+                    style: TytoText.ui(
+                        size: 11.5,
+                        weight: FontWeight.w400,
+                        color: TytoColors.brume),
                   ),
                 ],
               ),
@@ -513,7 +557,8 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
     // Sur iOS, l'abonnement passe par l'App Store, jamais par le site ni
     // par Stripe : Apple l'interdit (règle 3.1.1). Les offres n'y
     // apparaissent que si les achats intégrés sont en place.
-    final offresVisibles = PlatformInfo.estIOS ? AchatsService.disponible : true;
+    final offresVisibles =
+        PlatformInfo.estIOS ? AchatsService.disponible : true;
     // Un abonnement acheté sur le site ne se gère pas depuis iOS : on ne
     // propose la gestion Apple que pour un abonnement Apple.
     final gestionVisible = PlatformInfo.estIOS
@@ -553,11 +598,15 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _traceSvg(_traceEnveloppe, size: 16, color: TytoColors.nuit),
+                    _traceSvg(_traceEnveloppe,
+                        size: 16, color: TytoColors.nuit),
                     const SizedBox(width: 6),
                     Text(
                       'Créer mon compte',
-                      style: TytoText.ui(size: 14.5, weight: FontWeight.w700, color: TytoColors.nuit),
+                      style: TytoText.ui(
+                          size: 14.5,
+                          weight: FontWeight.w700,
+                          color: TytoColors.nuit),
                     ),
                   ],
                 ),
@@ -578,7 +627,8 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
         sub: 'Tous les articles',
         onTap: () {
           Navigator.pop(context);
-          launchUrl(Uri.parse('https://tytoai.app/blog'), mode: LaunchMode.externalApplication);
+          launchUrl(Uri.parse('https://tytoai.app/blog'),
+              mode: LaunchMode.externalApplication);
         },
       )),
       if (signedIn && isPro)
@@ -611,9 +661,12 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
       // toucher, pour voir le changement.
       if (signedIn)
         _encadre(_carte(
-          icone: _traceSvg(_saisonActive ? _traceCloche : _traceClocheBarree, size: 16, color: icone),
+          icone: _traceSvg(_saisonActive ? _traceCloche : _traceClocheBarree,
+              size: 16, color: icone),
           label: 'Conseils de saison',
-          sub: _saisonActive ? 'Notifications activées' : 'Notifications désactivées',
+          sub: _saisonActive
+              ? 'Notifications activées'
+              : 'Notifications désactivées',
           onTap: () async {
             final nouveau = !_saisonActive;
             setState(() => _saisonActive = nouveau);
@@ -697,12 +750,18 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
                 children: [
                   Text(
                     label,
-                    style: TytoText.ui(size: 14, weight: FontWeight.w600, color: TytoColors.lune.withAlpha(0xcc)),
+                    style: TytoText.ui(
+                        size: 14,
+                        weight: FontWeight.w600,
+                        color: TytoColors.lune.withAlpha(0xcc)),
                   ),
                   const SizedBox(height: 1),
                   Text(
                     sub,
-                    style: TytoText.ui(size: 11, weight: FontWeight.w400, color: TytoColors.brume),
+                    style: TytoText.ui(
+                        size: 11,
+                        weight: FontWeight.w400,
+                        color: TytoColors.brume),
                   ),
                 ],
               ),
@@ -740,8 +799,9 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
             const SizedBox(width: 6),
             Text(
               isPro ? 'COMPTE PRO' : 'COMPTE PREMIUM',
-              style: TytoText.ui(size: 11, weight: FontWeight.w700, color: couleur)
-                  .copyWith(letterSpacing: 0.66), // 0.06em
+              style:
+                  TytoText.ui(size: 11, weight: FontWeight.w700, color: couleur)
+                      .copyWith(letterSpacing: 0.66), // 0.06em
             ),
           ],
         ),
@@ -757,8 +817,11 @@ class _TytoDrawerState extends State<TytoDrawer> with SingleTickerProviderStateM
         onTap: () => action(),
         child: Text(
           texte,
-          style: TytoText.ui(size: 10.5, weight: FontWeight.w400, color: TytoColors.brume)
-              .copyWith(decoration: TextDecoration.underline, decorationColor: TytoColors.brume),
+          style: TytoText.ui(
+                  size: 10.5, weight: FontWeight.w400, color: TytoColors.brume)
+              .copyWith(
+                  decoration: TextDecoration.underline,
+                  decorationColor: TytoColors.brume),
         ),
       );
     }
@@ -817,42 +880,4 @@ class _BoutonDoreState extends State<_BoutonDore> {
       ),
     );
   }
-}
-
-/// Le petit angle doré, dans chaque coin du tiroir.
-class _CoinOrnement extends StatelessWidget {
-  const _CoinOrnement();
-
-  @override
-  Widget build(BuildContext context) {
-    return const IgnorePointer(
-      child: CustomPaint(
-        size: Size(16, 16),
-        painter: _CoinPainter(),
-      ),
-    );
-  }
-}
-
-class _CoinPainter extends CustomPainter {
-  const _CoinPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Comme le SVG du site, le trait est coupé au bord de sa boîte de
-    // 16 px : il n'en reste qu'un demi-pixel, très fin.
-    canvas.clipRect(Offset.zero & size);
-    final peinture = Paint()
-      ..color = TytoColors.fauve
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-    final chemin = Path()
-      ..moveTo(0, 8)
-      ..lineTo(0, 0)
-      ..lineTo(8, 0);
-    canvas.drawPath(chemin, peinture);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
