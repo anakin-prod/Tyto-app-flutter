@@ -300,9 +300,13 @@ class _CarnetScreenState extends State<CarnetScreen> {
     EmergencySheet.ouvrir(context, petId: p?.id, petName: p?.name, petWeight: p?.weightKg);
   }
 
-  /// Le dossier PDF, disponible pour tout compte connecté (pas besoin
-  /// d'être Pro) — généré sur l'appareil, puis proposé au partage.
+  /// Le dossier PDF, fonction Premium (Pro inclus) — généré sur l'appareil, puis proposé au partage.
   Future<void> _exporterPdf() async {
+    if (!(_isPremium || _isPro)) {
+      return PhotoUpsell.afficher(context,
+          titre: 'Export PDF du carnet',
+          debut: 'Génère le dossier de santé de ton compagnon en PDF, prêt à partager avec ton vétérinaire. C’est une fonction ');
+    }
     if (_selected == null || _exportLoading) return;
     setState(() => _exportLoading = true);
     try {
@@ -369,6 +373,11 @@ class _CarnetScreenState extends State<CarnetScreen> {
   Future<void> _noterObservation() async {
     final texte = _obsController.text.trim();
     if (texte.isEmpty || _selected == null || _obsEnvoi) return;
+    if (!(_isPremium || _isPro)) {
+      return PhotoUpsell.afficher(context,
+          titre: "Journal d'observations",
+          debut: 'Note au quotidien l’appétit, l’humeur, la démarche de ton compagnon et retrouve tout dans son carnet. C’est une fonction ');
+    }
     setState(() => _obsEnvoi = true);
     try {
       await DataService.saveEvent(
@@ -728,7 +737,7 @@ class _CarnetScreenState extends State<CarnetScreen> {
       _Fantome(
         icone: 'IconDocument',
         texte: 'Export',
-        cadenas: false,
+        cadenas: !(_isPremium || _isPro),
         vert: false,
         charge: _exportLoading,
         onTap: _exporterPdf,

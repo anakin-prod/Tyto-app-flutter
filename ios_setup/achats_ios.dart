@@ -129,6 +129,7 @@ class _PaywallPageState extends State<_PaywallPage> {
   String? _erreur;
   String? _enCours; // identifiant du paquet en cours d'achat
   bool _restauration = false;
+  String? _actif; // 'pro', 'premium' ou null (gratuit)
 
   @override
   void initState() {
@@ -139,6 +140,14 @@ class _PaywallPageState extends State<_PaywallPage> {
   Future<void> _charger() async {
     try {
       final offerings = await Purchases.getOfferings();
+      try {
+        final info = await Purchases.getCustomerInfo();
+        if (info.entitlements.all['pro']?.isActive ?? false) {
+          _actif = 'pro';
+        } else if (info.entitlements.all['premium']?.isActive ?? false) {
+          _actif = 'premium';
+        }
+      } catch (_) {}
       final paquets = List<Package>.of(offerings.current?.availablePackages ?? const <Package>[]);
       // Du moins cher au plus cher : Premium avant Pro.
       paquets.sort((a, b) => a.storeProduct.price.compareTo(b.storeProduct.price));
@@ -217,86 +226,214 @@ class _PaywallPageState extends State<_PaywallPage> {
   /// standard par offre — l'autre est donc personnalisé.
   String _periode(Package p) {
     final id = p.storeProduct.identifier.toLowerCase();
-    if (p.packageType == PackageType.monthly || id.contains('month')) return ' par mois';
-    if (p.packageType == PackageType.annual || id.contains('year') || id.contains('annual')) return ' par an';
-    if (p.packageType == PackageType.weekly || id.contains('week')) return ' par semaine';
+    if (p.packageType == PackageType.monthly || id.contains('month')) return '/mois';
+    if (p.packageType == PackageType.annual || id.contains('year') || id.contains('annual')) return '/an';
+    if (p.packageType == PackageType.weekly || id.contains('week')) return '/semaine';
     return '';
   }
 
-  Widget _carte(Package p) {
-    final produit = p.storeProduct;
-    final estPro = produit.identifier.toLowerCase().contains('pro');
-    final avantages = estPro
-        ? const [
-            'Tout le plan Premium',
-            'Veille sanitaire quotidienne sur tous tes animaux',
-            "Lecture d'ordonnance par photo",
-            'Synthèse vétérinaire en un clic',
-            'Saisie vocale des observations',
-            "Journal d'équipe partagé (2 places incluses)",
-            'Animaux illimités',
-          ]
-        : const [
-            'Questions illimitées',
-            'Réponses plus poussées',
-            "L'œil de Tyto : analyse de photos",
-          ];
-    final occupe = _enCours == p.identifier;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        color: TytoColors.papier,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: estPro ? TytoColors.fauve : TytoColors.encre.withOpacity(0.15), width: estPro ? 1.6 : 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  /// La carte du plan gratuit : l'offre actuelle tant que la personne
+  /// n'est pas abonnée.
+  Widget _carteGratuit() {
+    const avantages = [
+      '15 questions par jour',
+      'Profils de vos compagnons',
+      'Carnet de santé et rappels',
+      'Tableau de bord des échéances',
+      'Courbe de poids',
+    ];
+    final courant = _actif == null;
+    final accent = TytoColors.fauve;
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 16),
+      child: Stack(
+        clipBehavior: Clip.none,
         children: [
-          Text(estPro ? 'Tyto Pro' : 'Tyto Premium', style: TytoText.display(size: 20, color: TytoColors.encre)),
-          const SizedBox(height: 2),
-          RichText(
-            text: TextSpan(
-              style: TytoText.ui(size: 15, color: TytoColors.encre),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(22, 26, 22, 24),
+            decoration: BoxDecoration(
+              color: TytoColors.papier,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: TytoColors.encre.withOpacity(0.18), width: 2),
+              boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 34, offset: Offset(0, 10))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextSpan(text: produit.priceString, style: const TextStyle(fontWeight: FontWeight.w700)),
-                TextSpan(text: _periode(p)),
+                const SizedBox(height: 6),
+                Text('Gratuit', style: TytoText.display(size: 23, color: TytoColors.encre)),
+                const SizedBox(height: 8),
+                Text('0 €', style: TytoText.display(size: 34, color: TytoColors.encre)),
+                const SizedBox(height: 6),
+                Text(
+                  'Pour découvrir Tyto et poser vos premières questions.',
+                  style: TytoText.body(size: 14.5, color: TytoColors.encre.withOpacity(0.8)).copyWith(height: 1.5),
+                ),
+                const SizedBox(height: 18),
+                for (final a in avantages)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('✓', style: TextStyle(color: accent, fontWeight: FontWeight.w700, height: 1.5, fontSize: 14)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(a, style: TytoText.body(size: 14, color: TytoColors.encre).copyWith(height: 1.5)),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          for (final a in avantages)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 3),
-                    child: Icon(Icons.check_rounded, size: 15, color: TytoColors.fauve),
+          if (courant)
+            Positioned(
+              top: -12,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(999)),
+                  child: Text(
+                    'VOTRE OFFRE ACTUELLE',
+                    style: TytoText.ui(size: 11, weight: FontWeight.w700, color: TytoColors.nuit).copyWith(letterSpacing: 0.88),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(a, style: TytoText.body(size: 14, color: TytoColors.encre).copyWith(height: 1.4)),
-                  ),
-                ],
+                ),
               ),
             ),
-          const SizedBox(height: 10),
-          SizedBox(
+        ],
+      ),
+    );
+  }
+
+  /// La carte d'un plan : le même contenu et la même mise en page que la page
+  /// « Tarifs » du site (app/tarifs/page.js) — badge, nom, prix, accroche,
+  /// liste détaillée des avantages et bouton. Seul le prix vient d'Apple.
+  Widget _carte(Package p) {
+    final produit = p.storeProduct;
+    final estPro = produit.identifier.toLowerCase().contains('pro');
+    // Le Pro a sa propre teinte, comme sur le site.
+    final accent = estPro ? const Color(0xFF7FB2A6) : TytoColors.fauve;
+    final texteBouton = estPro ? const Color(0xFF0F2A24) : TytoColors.nuit;
+    final courant = _actif == (estPro ? 'pro' : 'premium');
+    final badge = courant ? 'Votre offre actuelle' : (estPro ? 'Professionnels' : 'Le plus choisi');
+    final accroche = estPro
+        ? 'Pour les refuges, éleveurs, pensions et pet-sitters qui gèrent plusieurs animaux au quotidien.'
+        : 'Pour les propriétaires qui veulent le meilleur pour leur animal.';
+    final avantages = estPro
+        ? const [
+            'Tout le plan Premium, et en plus :',
+            'Animaux illimités',
+            "Veille sanitaire quotidienne — l'IA relit le journal de tous vos animaux et détecte ce que l'œil humain ne croise pas : tendances de poids, baisse d'appétit répétée, symptômes communs à plusieurs animaux (risque de contagion), échéances oubliées",
+            'Saisie vocale — notez une observation en parlant, même les mains prises',
+            "Ordonnance photographiée — Tyto lit l'ordonnance et prépare le protocole de traitement, que vous validez ligne par ligne",
+            'Synthèse vétérinaire — un compte-rendu structuré et complet généré en un clic avant la consultation',
+            "Journal d'équipe — invitez vos soigneurs, tout le monde voit et note sur les mêmes animaux, avec traçabilité de qui a fait quoi",
+            'Support prioritaire',
+          ]
+        : const [
+            'Tout le plan Gratuit, et en plus :',
+            'Questions illimitées',
+            "Réponses par un modèle d'IA plus avancé",
+            "L'œil de Tyto — analyse de photos (plante toxique, aliment, insecte, lésion suspecte)",
+            "Journal d'observations",
+            'Export PDF du carnet',
+          ];
+    final occupe = _enCours == p.identifier;
+
+    return Padding(
+      // Le badge dépasse de 12 px au-dessus de la carte.
+      padding: const EdgeInsets.only(top: 12, bottom: 16),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
             width: double.infinity,
-            child: ElevatedButton(
-              onPressed: (_enCours != null || _restauration) ? null : () => _acheter(p),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: TytoColors.fauve,
-                disabledBackgroundColor: TytoColors.fauve.withOpacity(0.4),
-                padding: const EdgeInsets.symmetric(vertical: 13),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+            padding: const EdgeInsets.fromLTRB(22, 26, 22, 24),
+            decoration: BoxDecoration(
+              color: TytoColors.papier,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: accent, width: 2),
+              boxShadow: const [BoxShadow(color: Color(0x66000000), blurRadius: 34, offset: Offset(0, 10))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 6),
+                Text(estPro ? 'Pro' : 'Premium', style: TytoText.display(size: 23, color: TytoColors.encre)),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(produit.priceString, style: TytoText.display(size: 34, color: TytoColors.encre)),
+                    const SizedBox(width: 4),
+                    Text(_periode(p), style: TytoText.ui(size: 14, color: TytoColors.encre.withOpacity(0.6))),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  accroche,
+                  style: TytoText.body(size: 14.5, color: TytoColors.encre.withOpacity(0.8)).copyWith(height: 1.5),
+                ),
+                const SizedBox(height: 18),
+                for (final a in avantages)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: a.endsWith(':')
+                        ? Text(
+                            a,
+                            style: TytoText.ui(size: 12.5, weight: FontWeight.w700, color: TytoColors.encre.withOpacity(0.6))
+                                .copyWith(height: 1.5),
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('✓', style: TextStyle(color: accent, fontWeight: FontWeight.w700, height: 1.5, fontSize: 14)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(a, style: TytoText.body(size: 14, color: TytoColors.encre).copyWith(height: 1.5)),
+                              ),
+                            ],
+                          ),
+                  ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: (_enCours != null || _restauration || courant) ? null : () => _acheter(p),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      disabledBackgroundColor: accent.withOpacity(0.4),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+                    ),
+                    child: occupe
+                        ? SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: texteBouton))
+                        : Text(courant ? 'Offre en cours' : (estPro ? 'Passer Pro' : 'Passer Premium'),
+                            style: TytoText.ui(size: 14.5, weight: FontWeight.w700, color: texteBouton)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            top: -12,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(999)),
+                child: Text(
+                  badge.toUpperCase(),
+                  style: TytoText.ui(size: 11, weight: FontWeight.w700, color: texteBouton).copyWith(letterSpacing: 0.88),
+                ),
               ),
-              child: occupe
-                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: TytoColors.nuit))
-                  : Text("S'abonner", style: TytoText.ui(size: 15, weight: FontWeight.w700, color: TytoColors.nuit)),
             ),
           ),
         ],
@@ -324,6 +461,23 @@ class _PaywallPageState extends State<_PaywallPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, bottom: 8),
+                    child: Text(
+                      'Choisissez votre formule',
+                      textAlign: TextAlign.center,
+                      style: TytoText.display(size: 26, color: TytoColors.lune),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Text(
+                      'Du simple curieux au refuge qui suit trente animaux — sans engagement, résiliable en deux clics.',
+                      textAlign: TextAlign.center,
+                      style: TytoText.body(size: 14.5, color: TytoColors.brume).copyWith(height: 1.5),
+                    ),
+                  ),
+                  _carteGratuit(),
                   for (final p in _offres!) _carte(p),
                   if (_erreur != null)
                     Padding(

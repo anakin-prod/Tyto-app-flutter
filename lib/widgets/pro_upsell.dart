@@ -123,14 +123,19 @@ class ProUpsell extends StatelessWidget {
 /// La fenêtre « L'œil de Tyto » du site, quand un compte gratuit veut
 /// joindre une photo : la fonction est Premium.
 class PhotoUpsell extends StatelessWidget {
-  const PhotoUpsell({super.key});
+  const PhotoUpsell({super.key, this.titre, this.debut});
+
+  /// Titre et début de phrase propres à une autre fonction Premium
+  /// (par défaut : l'œil de Tyto).
+  final String? titre;
+  final String? debut;
 
   /// Ouvre la fenêtre par-dessus l'écran courant (voile rgba(10,14,24,0.72)).
-  static Future<void> afficher(BuildContext context) {
+  static Future<void> afficher(BuildContext context, {String? titre, String? debut}) {
     return showDialog(
       context: context,
       barrierColor: const Color(0xB80A0E18),
-      builder: (_) => const PhotoUpsell(),
+      builder: (_) => PhotoUpsell(titre: titre, debut: debut),
     );
   }
 
@@ -145,20 +150,21 @@ class PhotoUpsell extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text("L'œil de Tyto", style: TytoText.display(size: 19, color: TytoColors.encre)),
+            Text(titre ?? "L'œil de Tyto", style: TytoText.display(size: 19, color: TytoColors.encre)),
             const SizedBox(height: 6),
             Text.rich(
               TextSpan(
                 children: [
-                  const TextSpan(
-                    text: 'Photographie une plante, un aliment, un insecte ou un bouton suspect : '
-                        "Tyto l'analyse pour ton compagnon. C'est une fonction ",
+                  TextSpan(
+                    text: debut ??
+                        'Photographie une plante, un aliment, un insecte ou un bouton suspect : '
+                            "Tyto l'analyse pour ton compagnon. C'est une fonction ",
                   ),
                   TextSpan(
                     text: 'Premium',
                     style: GoogleFonts.newsreader(fontSize: 15.5, fontWeight: FontWeight.w700, color: TytoColors.encre),
                   ),
-                  const TextSpan(text: ', avec les questions illimitées.'),
+                  TextSpan(text: debut == null ? ', avec les questions illimitées.' : '.'),
                 ],
               ),
               style: TytoText.body(size: 15.5, color: TytoColors.encre)
