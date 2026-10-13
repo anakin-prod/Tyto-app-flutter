@@ -449,7 +449,7 @@ class _PaywallPageState extends State<_PaywallPage> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close_rounded, color: TytoColors.lune),
+          icon: Icon(Icons.close_rounded, color: TytoColors.lune),
           onPressed: () => Navigator.pop(context, false),
         ),
         title: Text('Nos offres', style: TytoText.display(size: 20, color: TytoColors.lune)),
