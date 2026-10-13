@@ -71,7 +71,7 @@ workflows:
       vars:
         IOS_BUNDLE_ID: app.tytoai.tyto
         VERSION_NAME_IOS: 1.0.0
-        RC_IOS_KEY: A_REMPLIR
+        RC_IOS_KEY: appl_iWvhBjvxnPZAxGYYeujyylyERDN
     scripts:
       - name: Préparer le projet iOS
         script: |
