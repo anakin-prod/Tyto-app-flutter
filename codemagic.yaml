@@ -22,10 +22,10 @@ workflows:
       vars:
         # ⚠️ À augmenter à chaque nouvelle publication : Google refuse un numéro
         # déjà utilisé. Un « trou » dans la numérotation ne pose aucun problème.
-        VERSION_CODE: 13
+        VERSION_CODE: 14
         # Le nom affiché aux utilisateurs. 2.0.0 = grande mise à jour ;
-        # 1.0.2 serait de simples corrections. Seul VERSION_CODE compte pour Google.
-        VERSION_NAME: 2.0.0
+        # 2.1.0 = nouveautés plus modestes. Seul VERSION_CODE compte pour Google.
+        VERSION_NAME: 2.1.0
     scripts:
       - name: Récupérer les dépendances
         script: flutter pub get

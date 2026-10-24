@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'theme/colors.dart';
 import 'theme/background.dart';
@@ -94,6 +95,16 @@ class TytoApp extends StatelessWidget {
     return MaterialApp(
       title: 'Tyto',
       debugShowCheckedModeBanner: false,
+      // Tyto est entièrement en français : sans ces trois lignes, tout ce que
+      // fournit Flutter lui-même (calendrier, choix de l'heure, boutons
+      // « Annuler » / « OK », menu copier-coller) s'affichait en anglais.
+      locale: const Locale('fr', 'FR'),
+      supportedLocales: const [Locale('fr', 'FR')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
       scrollBehavior: const TytoScrollBehavior(),
       // Le dégradé du site est posé une fois pour toutes derrière chaque
       // écran, plutôt que répété dans chacun d'eux.

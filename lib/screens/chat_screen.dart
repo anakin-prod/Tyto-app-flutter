@@ -2811,7 +2811,13 @@ class _TexteRiche extends StatelessWidget {
   const _TexteRiche({required this.texte});
 
   static final _puce = RegExp(r'^[•\-\*]\s+');
-  static final _gras = RegExp(r'\*\*(.+?)\*\*');
+  // Trois cas, essayés dans cet ordre : ***gras italique***, **gras**,
+  // *italique*. Pour l'italique à une seule étoile, l'étoile ouvrante ne doit
+  // pas suivre une lettre ni être suivie d'un espace, et l'étoile fermante
+  // ne doit pas précéder un espace ni une lettre : « 5 * 3 », « 3*4 » ou une
+  // étoile de note de bas de page restent donc du texte normal.
+  static final _enrichi = RegExp(
+      r'\*\*\*(.+?)\*\*\*|\*\*(.+?)\*\*|(?<![\w*])\*(?![\s*])(.+?)(?<![\s*])\*(?![\w*])');
 
   // Les mesures du site, en « em » d'une police de 16,5 px.
   static const double _taille = 16.5;
@@ -2820,12 +2826,24 @@ class _TexteRiche extends StatelessWidget {
   List<TextSpan> _morceaux(String ligne) {
     final spans = <TextSpan>[];
     var dernier = 0;
-    for (final m in _gras.allMatches(ligne)) {
+    for (final m in _enrichi.allMatches(ligne)) {
       if (m.start > dernier)
         spans.add(TextSpan(text: ligne.substring(dernier, m.start)));
-      spans.add(TextSpan(
-          text: m.group(1),
-          style: const TextStyle(fontWeight: FontWeight.w700)));
+      if (m.group(1) != null) {
+        spans.add(TextSpan(
+            text: m.group(1),
+            style: const TextStyle(
+                fontWeight: FontWeight.w700, fontStyle: FontStyle.italic)));
+      } else if (m.group(2) != null) {
+        // Du gras, avec éventuellement de l'italique à l'intérieur.
+        spans.add(TextSpan(
+            style: const TextStyle(fontWeight: FontWeight.w700),
+            children: _morceaux(m.group(2)!)));
+      } else {
+        spans.add(TextSpan(
+            text: m.group(3),
+            style: const TextStyle(fontStyle: FontStyle.italic)));
+      }
       dernier = m.end;
     }
     if (dernier < ligne.length)

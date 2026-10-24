@@ -1,13 +1,15 @@
 name: tyto_app
 description: "Tyto — l'IA du monde animal"
 publish_to: 'none'
-version: 2.0.0+13
+version: 2.1.0+14
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:     # calendrier, heure et boutons du système en français
     sdk: flutter
   google_fonts: ^6.2.1       # charge Fraunces, Newsreader, Karla automatiquement
   http: ^1.2.1               # appels vers l'API de tytoai.app (le site déjà en place)
