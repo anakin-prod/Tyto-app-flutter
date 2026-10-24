@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/colors.dart';
-import '../services/platform_service.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../services/apple_service.dart';
@@ -423,8 +422,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ).copyWith(leadingDistribution: TextLeadingDistribution.even),
                         ),
                         const SizedBox(height: 26),
-                        // Sur iPhone : « Continuer avec Apple » en premier. Google n'y est
-                        // pas proposé (cette connexion n'a pas été testée sur iPhone).
+                        // Sur iPhone : « Continuer avec Apple » en premier (Apple l'exige
+                        // dès qu'une autre connexion tierce est proposée), puis Google.
                         if (AppleService.disponible) ...[
                           Padding(
                             padding: const EdgeInsets.only(bottom: 14),
@@ -437,13 +436,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           _separateur(),
                         ],
-                        if (!PlatformInfo.estIOS) ...[
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
-                            child: _boutonGoogle(),
-                          ),
-                          _separateur(),
-                        ],
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _boutonGoogle(),
+                        ),
+                        _separateur(),
                         if (_linkSent) _carteEnvoye() else _formulaire(),
                       ],
                     ),

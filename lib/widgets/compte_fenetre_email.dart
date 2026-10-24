@@ -7,7 +7,6 @@ import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
 import '../services/apple_service.dart';
-import '../services/platform_service.dart';
 import '../screens/login_screen.dart';
 import 'fenetre_papier.dart';
 import 'site_icons.dart';
@@ -201,7 +200,7 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
               .copyWith(height: 1.5, leadingDistribution: TextLeadingDistribution.even),
         ),
         const SizedBox(height: 14),
-        // Sur iPhone : « Continuer avec Apple ». Google n'y est pas proposé,
+        // Sur iPhone : « Continuer avec Apple » en premier, puis Google,
         // comme sur l'écran de connexion.
         if (AppleService.disponible) ...[
           AppleService.bouton(onTap: _apple, hauteur: 44, rayon: 10),
@@ -209,12 +208,10 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
           _separateur(),
           const SizedBox(height: 12),
         ],
-        if (!PlatformInfo.estIOS) ...[
-          _boutonGoogle(),
-          const SizedBox(height: 12),
-          _separateur(),
-          const SizedBox(height: 12),
-        ],
+        _boutonGoogle(),
+        const SizedBox(height: 12),
+        _separateur(),
+        const SizedBox(height: 12),
         TextField(
           controller: _email,
           keyboardType: TextInputType.emailAddress,
