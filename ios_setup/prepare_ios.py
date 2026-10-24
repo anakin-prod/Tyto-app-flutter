@@ -135,6 +135,13 @@ def regler_info_plist():
     # que le chiffrement standard du système (HTTPS).
     plist["ITSAppUsesNonExemptEncryption"] = False
 
+    # Langue de l'app : Tyto est en français. Sans cette déclaration, l'App
+    # Store affiche « Langues : Anglais » et les fenêtres du système
+    # (autorisations, copier/coller…) restent en anglais.
+    plist["CFBundleDevelopmentRegion"] = "fr"
+    plist["CFBundleLocalizations"] = ["fr"]
+    info("langue : français")
+
     # Le lien de connexion par email ouvre l'app via ce schéma.
     types = plist.get("CFBundleURLTypes", [])
     if not any(SCHEMA_CONNEXION in t.get("CFBundleURLSchemes", []) for t in types):
