@@ -70,8 +70,14 @@ workflows:
         bundle_identifier: app.tytoai.tyto
       vars:
         IOS_BUNDLE_ID: app.tytoai.tyto
-        VERSION_NAME_IOS: 1.0.0
+        # ⚠️ La version 1.0.0 est déjà en ligne : Apple refuse tout nouveau build
+        # portant ce numéro. Chaque mise à jour publiée a besoin d'un numéro
+        # plus grand (1.1.0, 1.1.1…), à créer aussi dans App Store Connect.
+        VERSION_NAME_IOS: 1.1.0
         RC_IOS_KEY: appl_iWvhBjvxnPZAxGYYeujyylyERDN
+        # « Continuer avec Apple ». Mettre 0 pour compiler sans (si la signature
+        # échoue parce que le profil Apple n'a pas encore la nouvelle autorisation).
+        APPLE_SIGNIN: "1"
     scripts:
       - name: Préparer le projet iOS
         script: |

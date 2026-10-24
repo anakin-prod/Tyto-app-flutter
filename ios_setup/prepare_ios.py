@@ -19,11 +19,17 @@ générer par Flutter, puis y règle tout ce que Tyto demande :
   - les achats intégrés Apple (RevenueCat) : ce script remplace le fichier vide
     lib/services/achats_service.dart par ios_setup/achats_ios.dart et ajoute le
     paquet purchases_flutter. Les compilations Android ne les voient jamais.
+  - « Continuer avec Apple » : ce script remplace le fichier vide
+    lib/services/apple_service.dart par ios_setup/apple_ios.dart, ajoute les
+    paquets sign_in_with_apple et crypto, et déclare l'autorisation iOS
+    correspondante (Runner.entitlements). Variable APPLE_SIGNIN=0 : désactive
+    tout cela (compilation sans bouton Apple, comme avant).
 
 On peut le relancer sans risque : chaque étape vérifie avant de modifier.
 
 Usage, à la racine du dépôt :   python3 ios_setup/prepare_ios.py
 Variables :  IOS_BUNDLE_ID   (défaut : app.tytoai.tyto)
+             APPLE_SIGNIN    (défaut : 1 ; mettre 0 pour compiler sans connexion Apple)
              SKIP_FLUTTER_CREATE=1   (tests : ne génère pas le projet, n'ajoute pas le paquet)
              TYTO_ROOT       (tests : autre racine que le dossier parent)
 """
@@ -433,6 +439,79 @@ def injecter_achats():
 
 
 # ------------------------------------------------------------------
+# « Continuer avec Apple ». Deux plages de versions larges : l'API utilisée
+# (getAppleIDCredential, SignInWithAppleButton) est la même dans toute la plage.
+PAQUETS_APPLE = ["sign_in_with_apple:>=6.1.0 <8.0.0", "crypto:>=3.0.3 <4.0.0"]
+ENTITLEMENT_APPLE = "com.apple.developer.applesignin"
+
+
+def declarer_autorisation_apple():
+    """Crée Runner.entitlements et le relie aux réglages de l'app.
+    Renvoie True si l'autorisation est bien en place."""
+    chemin = os.path.join(RUNNER, "Runner.entitlements")
+    donnees = {}
+    if os.path.isfile(chemin):
+        with open(chemin, "rb") as f:
+            donnees = plistlib.load(f)
+    donnees[ENTITLEMENT_APPLE] = ["Default"]
+    with open(chemin, "wb") as f:
+        plistlib.dump(donnees, f)
+    info("Runner.entitlements : connexion avec Apple déclarée")
+
+    pbx = os.path.join(IOS, "Runner.xcodeproj", "project.pbxproj")
+    contenu = lire(pbx)
+    if "CODE_SIGN_ENTITLEMENTS" in contenu:
+        info("fichier d'autorisations déjà relié au projet")
+        return True
+    # Les trois configurations de l'app (Debug, Profile, Release) ; les tests
+    # (« .RunnerTests ») ne sont pas touchés.
+    motif = re.compile(
+        r"^([ \t]*)PRODUCT_BUNDLE_IDENTIFIER = " + re.escape(BUNDLE_ID) + r";[ \t]*$", re.M
+    )
+    contenu, nb = motif.subn(
+        lambda m: m.group(0) + "\n" + m.group(1) + "CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;",
+        contenu,
+    )
+    if nb == 0:
+        avertir("réglages de l'app introuvables dans project.pbxproj : autorisation non reliée")
+        return False
+    ecrire(pbx, contenu)
+    info(f"fichier d'autorisations relié au projet ({nb} configuration(s))")
+    return True
+
+
+def injecter_apple():
+    print("8) Connexion avec Apple")
+    if os.environ.get("APPLE_SIGNIN", "1") == "0":
+        info("APPLE_SIGNIN=0 : désactivée (aucun bouton Apple dans cette compilation)")
+        return
+    source = os.path.join(ROOT, "ios_setup", "apple_ios.dart")
+    cible = os.path.join(ROOT, "lib", "services", "apple_service.dart")
+    if not os.path.isfile(source):
+        avertir("ios_setup/apple_ios.dart introuvable : connexion Apple non injectée")
+        return
+    # L'autorisation d'abord : sans elle, le bouton planterait. Si elle ne peut
+    # pas être posée, on garde la version vide (pas de bouton) plutôt que de
+    # livrer un bouton qui ne marche pas.
+    if not declarer_autorisation_apple():
+        avertir("connexion Apple NON activée dans cette compilation")
+        return
+    shutil.copyfile(source, cible)
+    info("lib/services/apple_service.dart remplacé par la version iOS")
+
+    pubspec = lire(os.path.join(ROOT, "pubspec.yaml"))
+    for paquet in PAQUETS_APPLE:
+        nom = paquet.split(":")[0]
+        if re.search(r"^\s+" + re.escape(nom) + r":", pubspec, re.M):
+            info(f"{nom} déjà déclaré")
+        elif os.environ.get("SKIP_FLUTTER_CREATE") == "1":
+            info(f"(test) ajout de {nom} ignoré")
+        else:
+            subprocess.run(["flutter", "pub", "add", paquet], cwd=ROOT, check=True)
+            info(f"paquet {nom} ajouté")
+
+
+# ------------------------------------------------------------------
 if __name__ == "__main__":
     print(f"Préparation iOS — identifiant : {BUNDLE_ID}")
     generer_projet()
@@ -444,4 +523,5 @@ if __name__ == "__main__":
     ajouter_ponts_swift()
     regler_ecran_demarrage()
     injecter_achats()
+    injecter_apple()
     print("Terminé.")

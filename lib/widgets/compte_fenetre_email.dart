@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/colors.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
+import '../services/apple_service.dart';
 import '../services/platform_service.dart';
 import '../screens/login_screen.dart';
 import 'fenetre_papier.dart';
@@ -155,6 +156,17 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
     }
   }
 
+  Future<void> _apple() async {
+    setState(() => _erreur = null);
+    try {
+      await AppleService.seConnecter();
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _erreur = 'Connexion Apple impossible — ${e.message}');
+    } catch (_) {
+      if (mounted) setState(() => _erreur = 'Connexion Apple impossible — réessaie.');
+    }
+  }
+
   void _seConnecter() {
     final navigateur = Navigator.of(context);
     _fermee = true;
@@ -189,8 +201,14 @@ class _FenetreCreerCompteState extends State<FenetreCreerCompte> {
               .copyWith(height: 1.5, leadingDistribution: TextLeadingDistribution.even),
         ),
         const SizedBox(height: 14),
-        // Sur iOS, Google n'est pas proposé (Apple exigerait alors
-        // « Se connecter avec Apple »), comme sur l'écran de connexion.
+        // Sur iPhone : « Continuer avec Apple ». Google n'y est pas proposé,
+        // comme sur l'écran de connexion.
+        if (AppleService.disponible) ...[
+          AppleService.bouton(onTap: _apple, hauteur: 44, rayon: 10),
+          const SizedBox(height: 12),
+          _separateur(),
+          const SizedBox(height: 12),
+        ],
         if (!PlatformInfo.estIOS) ...[
           _boutonGoogle(),
           const SizedBox(height: 12),

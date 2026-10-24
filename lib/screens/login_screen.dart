@@ -6,6 +6,7 @@ import '../theme/colors.dart';
 import '../services/platform_service.dart';
 import '../theme/typography.dart';
 import '../services/auth_service.dart';
+import '../services/apple_service.dart';
 import '../widgets/owl_sketch.dart';
 import '../widgets/fenetre_papier.dart';
 import '../widgets/compte_fenetre_email.dart';
@@ -139,6 +140,19 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthService.signInWithGoogle();
     } catch (e) {
       setState(() => _errorMessage = "La connexion Google n'a pas abouti. Réessaie.");
+    }
+  }
+
+  /// « Continuer avec Apple » (iPhone seulement). L'annulation de la fenêtre
+  /// Apple n'est pas une erreur : on n'affiche rien.
+  Future<void> _signInWithApple() async {
+    setState(() => _errorMessage = null);
+    try {
+      await AppleService.seConnecter();
+    } on AuthException catch (e) {
+      if (mounted) setState(() => _errorMessage = "La connexion avec Apple n'a pas abouti — ${e.message}");
+    } catch (_) {
+      if (mounted) setState(() => _errorMessage = "La connexion avec Apple n'a pas abouti. Réessaie.");
     }
   }
 
@@ -409,8 +423,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           ).copyWith(leadingDistribution: TextLeadingDistribution.even),
                         ),
                         const SizedBox(height: 26),
-                        // Sur iOS, Apple exigerait « Se connecter avec Apple » dès qu'on
-                        // propose Google : on ne propose donc que le lien par email.
+                        // Sur iPhone : « Continuer avec Apple » en premier. Google n'y est
+                        // pas proposé (cette connexion n'a pas été testée sur iPhone).
+                        if (AppleService.disponible) ...[
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: AppleService.bouton(
+                              onTap: _signInWithApple,
+                              surSombre: true,
+                              hauteur: 48,
+                              rayon: 14,
+                            ),
+                          ),
+                          _separateur(),
+                        ],
                         if (!PlatformInfo.estIOS) ...[
                           Padding(
                             padding: const EdgeInsets.only(bottom: 14),
